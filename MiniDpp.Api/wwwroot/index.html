@@ -1,0 +1,3435 @@
+<!-- Mini DPP yönetim paneli. Sunucu metinleri yalnızca textContent ile yazılır. Karbon değeri bu ekranda gösterilmez. -->
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mini DPP</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --kabuk: #0b3a32;
+      --zemin: #eef3f1;
+      --kenar: #0b3a32;
+      --yuzey: #ffffff;
+      --yuzey-2: #f4f7f6;
+      --metin: #14211e;
+      --soluk: #5f736c;
+      --cizgi: #e3eeea;
+      --vurgu: #14c4a3;
+      --vurgu-hover: #0f766e;
+      --vurgu-metin: #05332c;
+      --odak: #0f766e;
+      --hata: #e11d48;
+      --hata-zemin: #fde8ee;
+      --bilgi-zemin: #e7f8f2;
+      --bilgi-metin: #115e59;
+      --mavi-zemin: #e7f0fb;
+      --mavi-metin: #1e3a8a;
+      --notr-zemin: #f1f5f4;
+      --pamuk: #0f766e;
+      --elastan: #5eead4;
+      --golge: 0 8px 24px rgba(16, 40, 34, 0.06);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, "Segoe UI", sans-serif;
+      background: var(--zemin);
+      color: var(--metin);
+      line-height: 1.45;
+      overflow-x: clip;
+    }
+    button, input, a { font: inherit; }
+    :focus-visible { outline: 2px solid var(--odak); outline-offset: 2px; }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+    }
+
+    .kabuk { display: grid; grid-template-columns: 15.25rem minmax(0, 1fr); min-height: 100vh; background: var(--kabuk); }
+    .kenar {
+      position: sticky; top: 0; align-self: start; height: 100vh; overflow: auto;
+      display: flex; flex-direction: column; gap: 0.35rem;
+      padding: 1.15rem 0.85rem 1rem;
+      background: var(--kabuk); color: #e8f6f2; border-right: 0;
+    }
+    .marka {
+      display: flex; align-items: center; gap: 0.7rem;
+      margin: 0 0 1rem; padding: 0.2rem 0.45rem;
+      color: #fff; text-decoration: none;
+    }
+    .marka svg { color: #2ee6c0; flex: none; }
+    .marka strong { display: block; font-size: 1.02rem; letter-spacing: -0.02em; color: #fff; }
+    .marka span { display: block; color: #b7d4cb; font-size: 0.72rem; }
+    .kenar a.nav {
+      display: flex; align-items: center; gap: 0.65rem;
+      padding: 0.62rem 0.75rem; border-radius: 12px;
+      color: #d7ebe4; text-decoration: none;
+    }
+    .kenar a.nav.aktif { background: #2ee6c0; color: #05332c; font-weight: 650; }
+    .kenar a.nav svg { flex: none; }
+    .yaprak-iz { position: absolute; left: 0.2rem; bottom: 0.1rem; color: #7dffe8; opacity: 0.16; pointer-events: none; }
+    .sistem {
+      position: relative; z-index: 1;
+      margin-top: auto; display: flex; align-items: center; gap: 0.45rem;
+      padding: 0.7rem 0.75rem; color: #d7ebe4; font-size: 0.82rem;
+    }
+    .sistem i {
+      width: 0.55rem; height: 0.55rem; border-radius: 50%;
+      background: var(--vurgu); display: block;
+    }
+    .sistem.hata i { background: var(--hata); }
+
+    .ana { min-width: 0; display: flex; flex-direction: column; background: var(--kabuk); }
+    .ust {
+      display: flex; align-items: center; gap: 0.8rem;
+      padding: 0.85rem 1.25rem 0.75rem; color: #fff;
+    }
+    .arama {
+      flex: 1; display: flex; align-items: center; gap: 0.5rem;
+      max-width: 34rem; margin: 0 auto;
+      padding: 0.55rem 0.85rem; border: 1px solid rgba(255,255,255,0.14); border-radius: 999px;
+      background: rgba(255,255,255,0.08); color: #d5ebe4;
+    }
+    .arama input {
+      flex: 1; min-width: 0; border: 0; background: transparent; color: #fff; outline: none;
+    }
+    .arama input::placeholder { color: #b7d4cb; }
+    .ust { overflow: visible; }
+    .ust-sag { display: flex; align-items: center; gap: 0.55rem; }
+    .zil-sarmal { position: relative; z-index: 40; }
+    .zil, .avatar {
+      width: 2.4rem; height: 2.4rem; border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.22); background: transparent; color: #fff;
+      display: grid; place-items: center; position: relative; cursor: pointer;
+    }
+    .avatar { background: #145e72; border-color: transparent; font-weight: 700; cursor: default; }
+    .zil-sayi {
+      position: absolute; top: -0.15rem; right: -0.15rem;
+      min-width: 1.05rem; height: 1.05rem; padding: 0 0.25rem;
+      border-radius: 999px; background: #ef4444; color: #fff;
+      font-size: 0.65rem; font-weight: 700; display: grid; place-items: center;
+    }
+    .zil-sayi[hidden] { display: none; }
+    .zil-liste {
+      position: absolute; top: calc(100% + 0.45rem); right: 0; z-index: 40;
+      width: min(24rem, 86vw); max-height: min(28rem, 70vh); overflow: auto;
+      padding: 0.85rem 0.9rem; background: var(--yuzey); color: var(--metin);
+      border: 1px solid var(--cizgi); border-radius: 14px; box-shadow: var(--golge);
+    }
+    .zil-liste h2 { margin: 0; font-size: 1rem; }
+    .zil-liste .alt-baslik { margin: 0.1rem 0 0.55rem; }
+    .bildirim { list-style: none; margin: 0; padding: 0.7rem 0 0; border-top: 1px solid var(--cizgi); }
+    .bildirim strong { display: block; font-size: 0.92rem; }
+    .bildirim p { margin: 0.2rem 0; font-size: 0.86rem; }
+    .bildirim time { display: block; color: var(--soluk); font-size: 0.75rem; }
+    .bildirim a { color: var(--vurgu-hover); font-weight: 650; font-size: 0.82rem; }
+    .bildirim.okundu { opacity: 0.55; }
+    .bildirim.tiklanir { cursor: pointer; }
+    .bildirim-sayi { margin: 0.7rem 0 0; color: var(--soluk); font-size: 0.78rem; }
+    .bildirim-bos { margin: 0.4rem 0 0; color: var(--soluk); }
+    .icerik { width: 100%; margin: 0; padding: 1.15rem 1.35rem 2rem; background: var(--zemin); border-radius: 22px 0 0 0; flex: 1; min-width: 0; }
+    .kabuk, .ana, .kart, .pano, .kalite-pano, .kalite-ust, .dagilim, .olcu, .olcu-kartlar, .alt-kartlar, .ozet-kart { min-width: 0; }
+    .baslik-satir {
+      display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem;
+      margin: 0.4rem 0 1rem;
+    }
+    h1 { margin: 0; font-size: 1.55rem; letter-spacing: -0.03em; font-weight: 650; }
+    .alt-baslik { margin: 0.25rem 0 0; color: var(--soluk); font-size: 0.92rem; }
+    .baslik-dugmeler { display: flex; gap: 0.5rem; flex: none; }
+    .dugme, button.dugme {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.55rem 0.85rem; border-radius: 12px; border: 1px solid transparent;
+      background: var(--vurgu); color: var(--vurgu-metin); text-decoration: none;
+      font-weight: 650; cursor: pointer;
+    }
+    .dugme.ikincil { background: transparent; color: var(--metin); border-color: var(--cizgi); }
+    .dugme:disabled { opacity: 0.55; cursor: default; }
+
+    .ozetler { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin-bottom: 0; align-items: stretch; }
+    .ozet-kart {
+      display: flex; align-items: center; gap: 0.75rem; height: 100%;
+      padding: 0.95rem 1rem; background: var(--yuzey);
+      border: 1px solid var(--cizgi); border-radius: var(--radius);
+    }
+    .ozet-ikon {
+      width: 2.5rem; height: 2.5rem; border-radius: 12px; display: grid; place-items: center;
+      background: #e7f8f3; color: #0f766e; flex: none;
+    }
+    .ozet-ikon svg { width: 18px; height: 18px; }
+    .ozet-metin { display: grid; gap: 0.08rem; min-width: 0; }
+    .ozet-metin > span { color: var(--soluk); font-size: 0.75rem; font-weight: 650; }
+    .ozet-metin strong { font-size: 1.7rem; line-height: 1.05; letter-spacing: -0.04em; font-weight: 720; }
+    .ozet-metin small { color: var(--soluk); font-size: 0.75rem; }
+
+    .kart {
+      background: var(--yuzey); border: 1px solid var(--cizgi);
+      border-radius: var(--radius); padding: 1rem 1.05rem 0.85rem;
+    }
+    .kart-baslik { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.2rem; }
+    .kart-baslik h2 { margin: 0; font-size: 1.05rem; font-weight: 650; }
+    .kart-baslik svg { color: var(--vurgu); }
+    .rozet {
+      display: inline-grid; place-items: center; min-width: 1.35rem; height: 1.35rem;
+      padding: 0 0.35rem; border-radius: 999px; background: #e7f8f3; color: #0f766e;
+      font-size: 0.75rem; font-weight: 700;
+    }
+    .liste-not { margin: 0.15rem 0 0.7rem; color: var(--soluk); font-size: 0.86rem; }
+    .filtreler { display: flex; flex-wrap: wrap; gap: 0.55rem; margin: 0 0 0.7rem; align-items: end; }
+    .filtreler label { display: grid; gap: 0.2rem; color: var(--soluk); font-size: 0.72rem; font-weight: 650; }
+    .filtreler select, .sayfalama .dugme {
+      border: 1px solid var(--cizgi); background: #fff; color: var(--metin);
+      border-radius: 10px; padding: 0.4rem 0.55rem; font: inherit;
+    }
+    button.sira {
+      border: 0; background: transparent; color: inherit; font: inherit; font-weight: 650;
+      cursor: pointer; padding: 0; display: inline-flex; align-items: center; gap: 0.25rem;
+    }
+    th[aria-sort="ascending"] button.sira::after { content: "↑"; }
+    th[aria-sort="descending"] button.sira::after { content: "↓"; }
+    .tablo-sarmal { max-height: 32rem; max-width: 100%; overflow: auto; }
+    .tablo-sarmal thead th { position: sticky; top: 0; background: #fff; z-index: 1; }
+    .sayfalama { display: flex; justify-content: flex-end; align-items: center; gap: 0.55rem; margin-top: 0.7rem; }
+    .sayfa-bilgi { color: var(--soluk); font-size: 0.82rem; }
+    .filtre-ozet { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; margin: 0 0 0.7rem; }
+    .sonuc-sayisi { margin: 0; color: var(--metin); font-size: 0.86rem; font-weight: 650; }
+    .etiketler { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .filtre-etiket {
+      border: 1px solid #b7e4d8; background: #e7f8f3; color: #0f3d34;
+      border-radius: 999px; padding: 0.2rem 0.55rem; font: inherit; font-size: 0.78rem; font-weight: 650; cursor: pointer;
+    }
+    .sutunlar { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0 0 0.7rem; padding: 0; list-style: none; }
+    .sutunlar li { padding: 0.2rem 0.5rem; border-radius: 8px; background: var(--yuzey-2); color: var(--metin); font-size: 0.78rem; }
+    .durum, .uyari, .bilgi { margin: 0.4rem 0 0.7rem; padding: 0.7rem 0.8rem; border-radius: 10px; }
+    .durum-yukleniyor, .durum-bos { background: var(--yuzey-2); color: var(--soluk); }
+    .durum-hata, .uyari { background: var(--hata-zemin); color: #9f1239; }
+    .bilgi { background: var(--bilgi-zemin); color: var(--bilgi-metin); }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 0.72rem 0.45rem; border-bottom: 1px solid var(--cizgi); vertical-align: middle; }
+    th { color: var(--soluk); font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr { cursor: pointer; }
+    tbody tr:hover { background: rgba(46, 230, 192, 0.04); }
+    .gtin { font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", monospace; font-size: 0.78rem; white-space: nowrap; }
+    .model-link { color: inherit; text-decoration: none; font-weight: 600; }
+    .tarih span { display: block; white-space: nowrap; font-size: 0.82rem; }
+    .tarih span + span { color: var(--soluk); }
+    .elyaf { display: flex; align-items: center; gap: 0.55rem; min-width: 8.5rem; }
+    .cubuk { display: flex; width: 4.5rem; height: 7px; border-radius: 999px; overflow: hidden; background: #e3eeea; flex: none; }
+    .dilim { display: block; height: 100%; }
+    .dilim-pamuk { background: var(--pamuk); }
+    .dilim-elastan { background: var(--elastan); }
+    .elyaf-etiketler { display: flex; flex-direction: column; gap: 0.05rem; font-size: 0.75rem; line-height: 1.2; }
+    .elyaf-etiketler b { font-weight: 650; }
+    .islemler { display: flex; align-items: center; gap: 0.35rem; }
+    .pasaport {
+      color: var(--vurgu); text-decoration: none; font-weight: 650; white-space: nowrap;
+    }
+    .nokta, .qr-dugme {
+      border: 1px solid var(--cizgi); background: #fff; color: var(--metin);
+      border-radius: 10px; cursor: pointer;
+    }
+    .nokta { width: 2rem; height: 2rem; display: grid; place-items: center; }
+    .qr-dugme { padding: 0.2rem; display: block; }
+    .qr-dugme img { display: block; width: 46px; height: 46px; border-radius: 6px; background: #fff; }
+    .menu { position: relative; }
+    .menu-liste {
+      position: fixed; z-index: 40; min-width: 11rem; padding: 0.35rem;
+      background: #fff; border: 1px solid var(--cizgi); border-radius: 12px; box-shadow: var(--golge);
+    }
+    .menu-liste a, .menu-liste button {
+      display: block; width: 100%; text-align: left; padding: 0.45rem 0.6rem;
+      border: 0; border-radius: 8px; background: transparent; color: var(--metin); text-decoration: none; cursor: pointer;
+    }
+    .menu-liste a:hover, .menu-liste button:hover { background: var(--yuzey-2); }
+    .kartlar { display: none; }
+
+    .panel-iki { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; margin-top: 1.15rem; align-items: stretch; }
+    .panel-iki > .kart { height: 100%; }
+    .alt-kartlar { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); gap: 1rem; margin-top: 1.15rem; align-items: start; }
+    .panel-sag { display: grid; gap: 1rem; min-width: 0; }
+    .son-urunler { list-style: none; margin: 0.4rem 0 0; padding: 0; display: grid; gap: 0.35rem; }
+    .son-urunler a { display: grid; gap: 0.05rem; min-width: 0; padding: 0.4rem 0.65rem; border: 1px solid var(--cizgi); border-radius: 10px; text-decoration: none; color: inherit; }
+    .son-urunler strong { font-size: 0.9rem; overflow-wrap: anywhere; }
+    .son-urunler span { color: var(--soluk); font-size: 0.78rem; overflow-wrap: anywhere; }
+    .son-urunler li.bos { color: var(--soluk); font-size: 0.88rem; }
+    .kalite-ozet { display: flex; align-items: baseline; gap: 0.75rem; margin: 0.55rem 0 0; }
+    .kalite-ozet strong { font-size: 1.7rem; line-height: 1; color: #0f766e; }
+    .kalite-ozet span { color: var(--soluk); font-size: 0.86rem; }
+    #gorunum-panel .panel-banner {
+      display: flex; flex-direction: column; align-items: stretch; gap: 0.85rem;
+      margin: 0 0 1rem; padding: 1.35rem 1.5rem 1.15rem; border-radius: 16px; color: #fff;
+      background:
+        linear-gradient(90deg, #0b3a32 0%, #0b3a32 30%, rgba(11, 58, 50, 0.7) 54%, rgba(11, 58, 50, 0.16) 100%),
+        url("banner-desen.svg") right center / cover no-repeat;
+    }
+    #gorunum-panel .banner-ust { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+    #gorunum-panel .banner-sol { min-width: 0; flex: 1; }
+    #gorunum-panel .panel-banner h1 { margin: 0; color: #fff; font-size: 1.55rem; font-weight: 700; }
+    #gorunum-panel .panel-banner p { margin: 0.4rem 0 0; max-width: 44rem; color: #e7f6f2; font-size: 0.92rem; }
+    #gorunum-panel .banner-ozellik { display: flex; align-items: center; flex-wrap: wrap; margin: 0; padding: 0; list-style: none; }
+    #gorunum-panel .banner-ozellik li { display: flex; align-items: center; gap: 0.55rem; padding: 0 1rem; color: #fff; font-size: 0.96rem; font-weight: 650; }
+    #gorunum-panel .banner-ozellik li:first-child { padding-left: 0; }
+    #gorunum-panel .banner-ozellik li + li { border-left: 1px solid rgba(255, 255, 255, 0.38); }
+    #gorunum-panel .banner-ozellik svg { width: 26px; height: 26px; color: #2ee6c0; flex: none; }
+    #gorunum-panel .banner-dugmeler { display: flex; flex-wrap: wrap; gap: 0.45rem; flex: none; }
+    #gorunum-panel .panel-banner .dugme.ikincil { color: #f4fffb; border-color: rgba(255, 255, 255, 0.4); }
+    #gorunum-panel .panel-ozet { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.75rem; }
+    #gorunum-panel .panel-ozet .ozet-kart { padding: 0.75rem 0.8rem; }
+    #gorunum-panel .panel-ozet .ozet-metin strong { font-size: 1.45rem; }
+    #gorunum-panel .ozet-uyari .ozet-ikon { background: #fde8ee; color: #e11d48; }
+    #gorunum-panel .ozet-uyari strong { color: #e11d48; }
+    #gorunum-panel .panel-orta,
+    #gorunum-panel .panel-alt { display: grid; gap: 1rem; margin-top: 1rem; align-items: stretch; }
+    #gorunum-panel .panel-orta { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); }
+    #gorunum-panel .panel-alt { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    #gorunum-panel .panel-iki { margin-top: 1rem; }
+    #gorunum-panel .panel-orta > .kart,
+    #gorunum-panel .panel-alt > .kart,
+    #gorunum-panel .panel-iki > .kart { height: 100%; }
+    #gorunum-panel .csv-sayilar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.45rem; margin-top: 0.7rem; }
+    #gorunum-panel .csv-sayi { padding: 0.45rem 0.55rem; border-radius: 10px; background: var(--yuzey-2); }
+    #gorunum-panel .csv-sayi span { display: block; color: var(--soluk); font-size: 0.72rem; }
+    #gorunum-panel .csv-sayi strong { font-size: 1.05rem; }
+    #gorunum-panel .csv-hatalar { margin: 0.7rem 0 0; padding: 0; list-style: none; display: grid; gap: 0.35rem; }
+    #gorunum-panel .csv-hatalar li { color: #9f1239; font-size: 0.82rem; }
+    #gorunum-panel .csv-dosya { margin: 0.35rem 0 0; font-weight: 650; overflow-wrap: anywhere; }
+    #gorunum-panel .csv-bos { display: grid; justify-items: center; gap: 0.4rem; margin: 1.15rem 0 0.7rem; text-align: center; color: var(--soluk); }
+    #gorunum-panel .csv-bos svg { width: 28px; height: 28px; color: #0f766e; }
+    #gorunum-panel .csv-bos p { margin: 0; max-width: 24rem; }
+    #gorunum-panel .kalite-skor + .ilerleme { margin: 0.5rem 0 0.15rem; }
+    #gorunum-panel .kalite-skor { margin: 0.45rem 0 0.15rem; font-size: 1.7rem; line-height: 1; color: #0f766e; }
+    #gorunum-panel .kalite-liste { margin: 0.55rem 0 0; padding: 0; list-style: none; display: grid; gap: 0.35rem; }
+    #gorunum-panel .kalite-liste li { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.82rem; }
+    #gorunum-panel .onizleme { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.85rem; align-items: center; margin-top: 0.55rem; }
+    #gorunum-panel .onizleme h3 { margin: 0 0 0.45rem; font-size: 1.15rem; }
+    #gorunum-panel .onizleme dl { display: grid; gap: 0.28rem; margin: 0; }
+    #gorunum-panel .onizleme dl > div { display: flex; gap: 0.45rem; min-width: 0; }
+    #gorunum-panel .onizleme dt { color: var(--soluk); min-width: 6.2rem; }
+    #gorunum-panel .onizleme dd { margin: 0; overflow-wrap: anywhere; }
+    #gorunum-panel .onizleme img { width: 112px; height: 112px; border: 1px solid var(--cizgi); border-radius: 12px; background: #fff; }
+    #gorunum-panel .onizleme-qr { display: block; padding: 0; border: 0; background: transparent; cursor: pointer; line-height: 0; }
+    #gorunum-panel .onizleme-gecis { display: flex; align-items: center; gap: 0.3rem; }
+    #gorunum-panel .onizleme-gecis button {
+      width: 1.7rem; height: 1.7rem; border-radius: 999px; border: 1px solid var(--cizgi);
+      background: #fff; color: var(--metin); cursor: pointer; font: inherit; line-height: 1;
+    }
+    #gorunum-panel .onizleme-gecis button:disabled { opacity: 0.4; cursor: default; }
+    #gorunum-panel .onizleme-sayac { min-width: 2.6rem; text-align: center; color: var(--soluk); font-size: 0.82rem; }
+    #gorunum-panel .onizleme-dugmeler { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.8rem; }
+    #gorunum-panel .harita-ici { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.7rem; align-items: center; }
+    #gorunum-panel .harita-ici h3 { margin: 0 0 0.35rem; font-size: 0.95rem; }
+    #gorunum-panel .harita-sahne { width: min(100%, 15rem); margin-top: 0; overflow: hidden; }
+    #gorunum-panel .islem-sarmal { max-height: 16rem; overflow: auto; margin-top: 0.45rem; }
+    #gorunum-panel .islem-sarmal a { color: #0f766e; font-weight: 650; text-decoration: none; }
+    #gorunum-panel .islem-sarmal th, #gorunum-panel .islem-sarmal td { padding: 0.45rem 0.4rem; }
+    .aktivite-ust { margin: 0 0 0.9rem; }
+    .kalite-pano { display: grid; gap: 0.8rem; margin-top: 0.9rem; }
+    .kalite-ust { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 0.8rem; }
+    .pano {
+      background: #fff; border: 1px solid var(--cizgi); border-radius: 16px; padding: 0.95rem 1rem 1rem;
+    }
+    .pano h2 { display: flex; align-items: center; gap: 0.45rem; margin: 0 0 0.85rem; font-size: 0.95rem; font-weight: 600; }
+    .pano h2 svg { color: #0f766e; }
+    .dagilim { display: grid; grid-template-columns: 9.5rem 1fr; gap: 1rem; align-items: center; }
+    .halka { width: 9.5rem; height: 9.5rem; max-width: 100%; }
+    .dilim-liste { display: grid; gap: 0.5rem; }
+    .dilim-satir {
+      display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.6rem; align-items: center;
+      padding: 0.55rem 0.7rem; border-radius: 12px; background: #f4f7f6; min-width: 0;
+    }
+    .renk-nokta { width: 0.5rem; height: 0.5rem; border-radius: 50%; }
+    .dilim-ad { font-size: 0.88rem; }
+    .dilim-cubuk { height: 3px; margin-top: 0.28rem; border-radius: 99px; background: #e3eeea; overflow: hidden; }
+    .dilim-cubuk span { display: block; height: 100%; border-radius: 99px; }
+    .dilim-pay { color: var(--soluk); font-size: 0.75rem; }
+    .dilim-adet { font-size: 1.05rem; }
+    .buyuk-oran { margin: 0.15rem 0 0.45rem; font-size: 2.35rem; letter-spacing: -0.04em; font-weight: 650; }
+    .buyuk-oran small { margin-left: 0.35rem; color: var(--soluk); font-size: 0.95rem; font-weight: 500; }
+    .ilerleme { height: 0.55rem; border-radius: 999px; background: #e3eeea; overflow: hidden; }
+    .ilerleme > span { display: block; height: 100%; width: 0; background: #0f766e; border-radius: inherit; }
+    .cizgi-not { margin: 0.45rem 0 0.7rem; color: var(--soluk); font-size: 0.86rem; }
+    .ikili { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+    .ikili article { padding: 0.7rem 0.8rem; border-radius: 12px; background: #f4f7f6; }
+    .ikili span { display: flex; align-items: center; gap: 0.35rem; color: var(--soluk); font-size: 0.72rem; letter-spacing: 0.04em; }
+    .ikili strong { display: block; margin-top: 0.25rem; font-size: 1.45rem; }
+    .ikili small { color: var(--soluk); }
+    .olcu-kartlar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.8rem; }
+    .olcu { padding: 0.85rem 1rem; border-radius: 16px; background: #fff; border: 1px solid var(--cizgi); }
+    .olcu span { color: var(--soluk); font-size: 0.72rem; letter-spacing: 0.04em; }
+    .olcu strong { display: block; margin: 0.25rem 0 0.15rem; font-size: 1.65rem; letter-spacing: -0.03em; }
+    .olcu em { font-style: normal; font-size: 0.8rem; }
+    .iyi { color: #0f766e; }
+    .kotu { color: #e11d48; }
+    .notr { color: var(--soluk); }
+    .dogrulama-ara {
+      display: flex; align-items: center; gap: 0.45rem; margin: 0 0 0.7rem;
+      padding: 0.55rem 0.75rem; border-radius: 12px; background: #f4f7f6; color: var(--soluk);
+    }
+    .dogrulama-ara input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--metin); outline: none; }
+    .pano .tablo-sarmal { overflow-x: auto; }
+    .dogrulama-tablo th { color: var(--soluk); font-size: 0.7rem; letter-spacing: 0.04em; }
+    .kayit-ad { display: inline-flex; align-items: center; gap: 0.45rem; }
+    .tik { width: 1.05rem; height: 1.05rem; border-radius: 4px; display: inline-grid; place-items: center; font-size: 0.72rem; }
+    .tik.iyi { background: #e7f8f2; color: #0f766e; }
+    .tik.kotu { background: #fde8ee; color: #e11d48; }
+    .durum-gecerli { color: var(--metin); }
+    .durum-hatali { color: #e11d48; }
+    .harita-baslik { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+    .harita-sahne { position: relative; margin-top: 0.45rem; width: min(100%, 24rem); }
+    #harita { display: block; width: 100%; height: auto; pointer-events: none; }
+    .kara { fill: #d7efe8; stroke: #0f766e; stroke-width: 0.55; }
+    .pin-katman { position: absolute; inset: 0; }
+    .pin {
+      position: absolute; z-index: 1; transform: translate(-50%, -100%);
+      width: 1.15rem; height: 1.35rem; padding: 0; border: 0; border-radius: 0;
+      background: transparent; color: #0f766e; cursor: pointer;
+    }
+    .pin svg, .pin .etiket { pointer-events: none; }
+    .pin svg { width: 14px; height: 16px; display: block; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35)); }
+    .pin .etiket {
+      display: none; position: absolute; left: calc(100% + 0.15rem); top: 0;
+      flex-direction: column; line-height: 1.05; padding: 0.14rem 0.42rem;
+      border: 1px solid #0f766e; border-radius: 999px; background: #fff; color: #0f3d34;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22); white-space: nowrap;
+    }
+    .pin.pin-sol .etiket { left: auto; right: calc(100% + 0.15rem); }
+    .pin:hover, .pin:focus, .pin:focus-visible { z-index: 3; outline: none; }
+    .pin:hover .etiket, .pin:focus .etiket, .pin:focus-visible .etiket, .pin.secili .etiket { display: flex; }
+    .pin .etiket span { font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
+    .pin small { font-size: 0.66rem; color: #3d6b60; }
+    .pin.secili { color: #0b3a32; }
+    .pin.secili .etiket { background: var(--vurgu); color: var(--vurgu-metin); border-color: var(--vurgu); }
+    .pin.secili small { color: var(--vurgu-metin); }
+    .harita-disi { margin: 0.4rem 0 0; color: var(--soluk); font-size: 0.78rem; }
+    .sehir-liste { display: grid; gap: 0.8rem; margin-top: 0.7rem; }
+    .sehir-satir { display: grid; gap: 0.28rem; width: 100%; margin: 0; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+    .sehir-ust { display: flex; justify-content: space-between; gap: 0.6rem; min-width: 0; }
+    .sehir-ust span { overflow-wrap: anywhere; }
+    .sehir-ust strong { flex: none; font-weight: 650; }
+    .sehir-iz { height: 0.55rem; border-radius: 999px; background: #e3eeea; overflow: hidden; }
+    .sehir-dolu { display: block; height: 100%; border-radius: 999px; background: #0f766e; }
+    .sehir-dolu.ikincil { background: #14c4a3; }
+    .sehir-ozet { margin: 0.8rem 0 0; color: var(--soluk); font-size: 0.82rem; }
+    .zaman { list-style: none; margin: 0.4rem 0 0; padding: 0; }
+    .zaman li { position: relative; padding: 0 0 0.85rem 1rem; border-left: 2px solid #cfe5de; }
+    .zaman li:last-child { padding-bottom: 0; }
+    .zaman time { display: block; color: var(--soluk); font-size: 0.75rem; }
+    .zaman p { margin: 0.05rem 0 0; font-size: 0.88rem; }
+    .zaman li::before {
+      content: ""; position: absolute; left: -5px; top: 0.15rem;
+      width: 8px; height: 8px; border-radius: 50%; background: var(--vurgu);
+    }
+    .tumunu { color: var(--vurgu); text-decoration: none; font-size: 0.8rem; font-weight: 650; white-space: nowrap; }
+
+    .yukleme { display: grid; gap: 0.7rem; }
+    #gorunum-aktar #sonuc { display: grid; gap: 0.75rem; margin-top: 0.95rem; }
+    .birak {
+      position: relative; display: grid; gap: 0.3rem; justify-items: center; padding: 1.5rem 1rem 1.25rem; text-align: center;
+      border: 1.5px dashed #8fd9c8; border-radius: 16px;
+      background: linear-gradient(180deg, #f4fbf8 0%, #ffffff 70%);
+      cursor: pointer; color: var(--metin);
+    }
+    .birak svg { color: #0f766e; }
+    .birak strong { font-size: 1rem; letter-spacing: -0.02em; }
+    .birak.uzerinde { border-color: var(--vurgu); background: #e7f8f3; }
+    .birak input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+    .dosya-adi { color: var(--soluk); font-size: 0.85rem; overflow-wrap: anywhere; }
+    .dosya-sec {
+      margin-top: 0.25rem; padding: 0.32rem 0.8rem; border-radius: 999px;
+      background: #e7f8f3; color: #0f766e; font-size: 0.82rem; font-weight: 700;
+    }
+    .sayaclar { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.55rem; }
+    .sayac { margin: 0; min-width: 0; padding: 0.75rem 0.8rem; border-radius: 14px; background: var(--yuzey); border: 1px solid var(--cizgi); }
+    .sayac span { display: block; color: var(--soluk); font-size: 0.75rem; }
+    .sayac strong { display: block; margin-top: 0.15rem; font-size: 1.35rem; letter-spacing: -0.03em; color: var(--metin); }
+    .sayac-yeni { background: #e7f8f2; border-color: #b7e4d8; }
+    .sayac-yeni strong { color: #115e59; }
+    .sayac-guncellenen { background: var(--mavi-zemin); border-color: #d5e4f7; }
+    .sayac-guncellenen strong { color: var(--mavi-metin); }
+    .sayac-ayni { background: #f4fbf8; border-color: #d5ebe4; }
+    .sayac-hatali { background: var(--hata-zemin); border-color: #f6c9d6; }
+    .sayac-hatali strong { color: #9f1239; }
+    #hatalar .tablo-sarmal { border: 1px solid var(--cizgi); border-radius: 12px; background: var(--yuzey); }
+    #hatalar td:first-child { width: 5.5rem; font-weight: 700; white-space: nowrap; }
+    #hatalar td { vertical-align: top; }
+    .hata-baslik { margin: 0.9rem 0 0.35rem; font-size: 1rem; }
+    .hata-liste { display: grid; gap: 0.45rem; }
+    .hata-karti { padding: 0.75rem 0.85rem; border-radius: 12px; background: #fde8ee; color: #9f1239; }
+    .hata-karti strong { display: block; color: #881337; }
+    .hata-karti p { margin: 0.2rem 0 0; }
+
+    #gorunum-detay h1, #gorunum-detay h2, #gorunum-detay h3 { color: #14211e; letter-spacing: -0.03em; }
+    #gorunum-detay h3 { display: flex; align-items: center; gap: 0.4rem; margin: 0 0 0.75rem; font-size: 0.95rem; }
+    #gorunum-detay h3 svg { color: #0f766e; flex: none; }
+    .sayfa-baslik { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; margin-bottom: 0.9rem; }
+    #gorunum-detay .geri { display: inline-flex; align-items: center; gap: 0.3rem; color: #0f766e; text-decoration: none; font-weight: 650; font-size: 0.88rem; }
+    .ust-etiket { margin: 0.45rem 0 0; color: #0f766e; font-size: 0.75rem; font-weight: 750; letter-spacing: 0.05em; }
+    #gorunum-detay h1 { margin: 0.15rem 0 0.15rem; font-size: 1.75rem; }
+    .detay-gtin { margin: 0 0 0.45rem; color: #3d524c; }
+    .durum-rozet { display: inline-flex; align-items: center; padding: 0.18rem 0.55rem; border-radius: 999px; font-size: 0.78rem; font-weight: 700; }
+    .durum-rozet-tamam { background: #e7f8f3; color: #0f766e; }
+    .durum-rozet-eksik { background: #fde8ee; color: #9f1239; }
+    .durum-rozet-bekle { background: #f4f7f6; color: #5f736c; }
+    .rozet-satir { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; }
+    .detay-rozet { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.55rem; border-radius: 999px; background: #e7f8f3; color: #115e59; font-size: 0.78rem; }
+    #gorunum-detay .detay-ana { background: #14c4a3; color: #05332c; text-decoration: none; border-radius: 12px; }
+    .cift { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .cift + .cift, .pasaport-kart, .surum-kart { margin-top: 0.75rem; }
+    .beyaz { background: #fff; border: 1px solid #e4eeea; border-radius: 16px; padding: 0.95rem 1rem 1rem; box-shadow: var(--golge); }
+    .buyuk-deger { margin: 0; font-size: 1.45rem; font-weight: 700; letter-spacing: -0.03em; }
+    .elyaf-cubuk { display: flex; height: 0.7rem; border-radius: 999px; overflow: hidden; background: #e3eeea; }
+    .elyaf-cubuk .dilim { display: block; height: 100%; }
+    .elyaf-satirlar { display: grid; gap: 0.45rem; margin-top: 0.85rem; }
+    .elyaf-satir { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; }
+    .elyaf-satir span { display: inline-flex; align-items: center; gap: 0.4rem; }
+    .elyaf-satir i { width: 0.55rem; height: 0.55rem; border-radius: 50%; display: block; }
+    .ust-etiket a { color: inherit; text-decoration: none; }
+    #detay-kontrol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
+    #detay-kontrol li { padding-left: 1.1rem; position: relative; font-size: 0.88rem; }
+    #detay-kontrol li.tamam::before { content: "✓"; position: absolute; left: 0; color: #0f766e; font-weight: 700; }
+    #detay-kontrol li.eksik::before { content: "!"; position: absolute; left: 0; color: #b45309; font-weight: 700; }
+    #detay-kontrol li.bekle::before { content: "·"; position: absolute; left: 0; color: #6b7c76; font-weight: 700; }
+    .kucuk-not { display: flex; align-items: flex-start; gap: 0.35rem; margin: 0.85rem 0 0; color: #5f736c; font-size: 0.78rem; }
+    .kucuk-not svg { color: #14b8a6; flex: none; margin-top: 0.1rem; }
+    .tuketici {
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem 1rem;
+      margin-top: 0.75rem; padding: 0.85rem 1rem; border-radius: 14px;
+      background: #e7f8f3; color: #115e59;
+    }
+    .tuketici strong { display: flex; align-items: center; gap: 0.4rem; }
+    .tuketici p { margin: 0.15rem 0 0; font-size: 0.86rem; }
+    .kilit {
+      display: inline-flex; align-items: center; gap: 0.35rem; flex: none; white-space: nowrap;
+      padding: 0.4rem 0.7rem; border-radius: 999px; background: #d5f3ea; color: #0f766e; font-size: 0.82rem; font-weight: 650;
+    }
+    #gorunum-detay .tablo-sarmal { overflow-x: auto; }
+    #gorunum-detay th, #gorunum-detay td { white-space: nowrap; }
+    #detay-baglar a { display: flex; align-items: center; gap: 0.4rem; }
+    .sag-sutun { display: grid; gap: 0.7rem; align-content: start; }
+    .pasaport-kutu { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.85rem; align-items: start; }
+    #detay-qr-dugme { border: 1px solid #d7e4df; border-radius: 14px; padding: 0.4rem; background: #fff; cursor: pointer; }
+    #detay-qr { width: 112px; height: 112px; display: block; background: #fff; border: 0; border-radius: 8px; }
+    #detay-baglar { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    #detay-baglar a {
+      display: flex; align-items: center; gap: 0.45rem; min-width: 0;
+      padding: 0.7rem 0.75rem; border: 1px solid #d7e4df; border-radius: 12px;
+      background: #f4fbf8; color: #0f766e; font-weight: 650; text-decoration: none;
+    }
+    #detay-baglar a svg { width: 18px; height: 18px; flex: none; }
+    #detay-baglar a:first-child { background: #14c4a3; color: #05332c; border-color: transparent; }
+    #gorunum-detay th { color: #6b7c76; }
+    #detay-surumler { list-style: none; margin: 0; padding: 0; }
+    #detay-surumler li { position: relative; padding: 0 0 0.8rem 1rem; border-left: 2px solid #d7ebe4; }
+    #detay-surumler li:last-child { padding-bottom: 0; }
+    #detay-surumler strong { display: block; }
+    #detay-surumler time, #detay-surumler p { margin: 0; color: #5f736c; font-size: 0.8rem; }
+    #gorunum-detay .durum { color: #1c2422; }
+    .alanlar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; margin-top: 0.8rem; }
+    .alan { padding: 0.75rem 0.8rem; border-radius: 12px; background: #0c1e1b; border: 1px solid var(--cizgi); }
+    .alan span { display: block; color: var(--soluk); font-size: 0.75rem; }
+    .alan strong { display: block; margin-top: 0.15rem; }
+    .detay-yan { display: flex; gap: 1rem; align-items: center; margin-top: 1rem; }
+    .detay-qr { width: 132px; height: 132px; background: #fff; border-radius: 12px; padding: 6px; }
+    .baglar { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.8rem; }
+    .baglar a { color: var(--vurgu); font-weight: 650; }
+    .surumler { margin: 0.8rem 0 0; padding-left: 1.1rem; }
+    dialog { border: 1px solid var(--cizgi); border-radius: 16px; background: var(--yuzey); color: var(--metin); padding: 1rem; }
+    dialog img { display: block; width: min(320px, 80vw); height: auto; background: #fff; }
+    dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
+    .rapor-kategori { margin-top: 0.9rem; }
+    .rapor-kategori h2 { margin: 0 0 0.25rem; font-size: 1.05rem; }
+    .dagilim-uc { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.7rem; }
+    .sayim { list-style: none; margin: 0.4rem 0 0; padding: 0; }
+    .sayim li { display: flex; justify-content: space-between; gap: 0.6rem; padding: 0.35rem 0; border-bottom: 1px solid var(--cizgi); }
+    #gorunum-ayar .ayar-sayfa { max-width: 46rem; display: grid; gap: 0.8rem; }
+    #gorunum-ayar .ayar-kart h2 { margin: 0 0 0.15rem; font-size: 1.05rem; }
+    #gorunum-ayar .ayar-satir {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(12rem, 16rem);
+      gap: 0.75rem 1.25rem; align-items: center; padding: 0.9rem 0;
+      border-top: 1px solid var(--cizgi);
+    }
+    #gorunum-ayar .ayar-satir:first-of-type { border-top: 0; padding-top: 0.35rem; }
+    #gorunum-ayar .ayar-satir label { display: block; font-weight: 650; font-size: 0.95rem; }
+    #gorunum-ayar .ayar-satir p { margin: 0.2rem 0 0; color: var(--soluk); font-size: 0.82rem; line-height: 1.4; }
+    #gorunum-ayar .ayar-satir select {
+      width: 100%; border: 1px solid var(--cizgi); background: var(--yuzey); color: var(--metin);
+      border-radius: 10px; padding: 0.5rem 0.65rem; font: inherit;
+    }
+    #gorunum-ayar .ayar-satir select:focus-visible { outline: 2px solid var(--vurgu); outline-offset: 1px; }
+    #gorunum-ayar .ayar-bilgi { display: flex; gap: 0.65rem; align-items: flex-start; }
+    #gorunum-ayar .ayar-bilgi svg { flex: none; margin-top: 0.1rem; color: #0f766e; }
+    #gorunum-ayar .ayar-bilgi h2 { margin: 0; font-size: 0.92rem; }
+    #gorunum-ayar .ayar-bilgi p { margin: 0.2rem 0 0; color: var(--soluk); font-size: 0.84rem; line-height: 1.4; }
+    html[data-yogunluk="ferah"] #gorunum-urunler .tablo-sarmal th,
+    html[data-yogunluk="ferah"] #gorunum-urunler .tablo-sarmal td { padding: 0.95rem 0.6rem; }
+    html[data-yogunluk="sik"] #gorunum-urunler .tablo-sarmal th,
+    html[data-yogunluk="sik"] #gorunum-urunler .tablo-sarmal td { padding: 0.28rem 0.4rem; line-height: 1.25; }
+    html[data-tema="koyu"] {
+      color-scheme: dark;
+      --zemin: #0e1c18; --yuzey: #17302a; --yuzey-2: #1e3b33;
+      --metin: #e8f6f1; --soluk: #b7d0c8; --cizgi: #2d4c43;
+      --hata-zemin: #3f1d28; --bilgi-zemin: #14352e; --bilgi-metin: #d1fae5;
+      --mavi-zemin: #1e2a44; --mavi-metin: #dbeafe; --notr-zemin: #1c3330;
+    }
+    html[data-tema="koyu"] .beyaz,
+    html[data-tema="koyu"] .kart,
+    html[data-tema="koyu"] .pano,
+    html[data-tema="koyu"] .olcu,
+    html[data-tema="koyu"] .urun-kart,
+    html[data-tema="koyu"] .dilim-satir,
+    html[data-tema="koyu"] .ikili article,
+    html[data-tema="koyu"] .menu-liste,
+    html[data-tema="koyu"] dialog,
+    html[data-tema="koyu"] .filtreler select,
+    html[data-tema="koyu"] .tablo-sarmal thead th {
+      background: var(--yuzey); color: var(--metin);
+    }
+    html[data-tema="koyu"] #gorunum-detay h1,
+    html[data-tema="koyu"] #gorunum-detay h2,
+    html[data-tema="koyu"] #gorunum-detay h3,
+    html[data-tema="koyu"] .buyuk-deger,
+    html[data-tema="koyu"] .detay-gtin { color: var(--metin); }
+    html[data-tema="koyu"] .birak { background: var(--yuzey-2); color: var(--metin); }
+    html[data-tema="koyu"] .sayfalama .dugme,
+    html[data-tema="koyu"] .beyaz { border-color: var(--cizgi); }
+    html[data-tema="koyu"] .sayfalama .dugme { background: var(--yuzey); color: var(--metin); }
+    html[data-tema="koyu"] .filtre-etiket { background: #14352e; color: #d1fae5; border-color: #2d4c43; }
+    html[data-tema="koyu"] .sehir-iz { background: #1c3a34; }
+    html[data-tema="koyu"] #gorunum-panel .onizleme-gecis button { background: var(--yuzey); color: var(--metin); }
+    html[data-tema="koyu"] #detay-baglar a { background: #14352e; color: #d1fae5; border-color: #2d4c43; }
+    html[data-tema="koyu"] #detay-baglar a:first-child { background: #14c4a3; color: #05332c; border-color: transparent; }
+    #gorunum-yardim .yardim-bolum { margin-top: 1.1rem; }
+    #gorunum-yardim .yardim-bolum > h2 { margin: 0 0 0.65rem; font-size: 1.05rem; font-weight: 650; }
+    #gorunum-yardim .yardim-adimlar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.7rem; }
+    #gorunum-yardim .yardim-adim { display: flex; flex-direction: column; gap: 0.35rem; padding: 0.85rem 0.9rem; transition: border-color 0.15s ease; }
+    #gorunum-yardim .yardim-adim:hover { border-color: var(--vurgu); }
+    #gorunum-yardim .yardim-adim-ust { display: flex; align-items: center; justify-content: space-between; }
+    #gorunum-yardim .yardim-no { color: #0f766e; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; }
+    #gorunum-yardim .yardim-ikon {
+      width: 2rem; height: 2rem; border-radius: 10px; display: grid; place-items: center;
+      background: #e7f8f3; color: #0f766e; flex: none;
+    }
+    #gorunum-yardim .yardim-ikon svg { width: 16px; height: 16px; }
+    #gorunum-yardim .yardim-adim h3 { margin: 0.15rem 0 0; font-size: 0.95rem; }
+    #gorunum-yardim .yardim-adim p { margin: 0; color: var(--soluk); font-size: 0.82rem; line-height: 1.4; }
+    #gorunum-yardim .yardim-sss { display: grid; gap: 0.45rem; }
+    #gorunum-yardim .yardim-soru { padding: 0; }
+    #gorunum-yardim .yardim-soru summary {
+      list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+      padding: 0.75rem 0.95rem; cursor: pointer; font-weight: 650; font-size: 0.92rem;
+    }
+    #gorunum-yardim .yardim-soru summary::-webkit-details-marker { display: none; }
+    #gorunum-yardim .yardim-soru:not([open]) > :not(summary) { display: none; }
+    #gorunum-yardim .yardim-ok { flex: none; color: var(--soluk); transition: transform 0.15s ease; }
+    #gorunum-yardim .yardim-soru[open] .yardim-ok { transform: rotate(180deg); }
+    #gorunum-yardim .yardim-soru p { margin: 0; padding: 0 0.95rem 0.8rem; color: var(--soluk); font-size: 0.86rem; }
+    html[data-tema="koyu"] #gorunum-yardim .yardim-no { color: #7dffe8; }
+    html[data-tema="koyu"] #gorunum-yardim .yardim-ikon { background: #14352e; color: #d1fae5; }
+    html[data-tema="koyu"] #gorunum-ayar .ayar-bilgi svg { color: #7dffe8; }
+
+    @media (max-width: 1100px) {
+      .ozetler, .olcu-kartlar { grid-template-columns: 1fr 1fr; }
+      .kalite-ust, .dagilim { grid-template-columns: 1fr; }
+      #gorunum-panel .panel-ozet { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      #gorunum-panel .panel-orta, #gorunum-panel .panel-alt { grid-template-columns: 1fr; }
+      #gorunum-yardim .yardim-adimlar { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 860px) {
+      .kabuk { grid-template-columns: 1fr; }
+      .kenar { position: static; height: auto; flex-direction: row; align-items: center; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--cizgi); }
+      .marka span, .sistem { display: none; }
+      .marka { margin: 0; }
+      .kenar a.nav span { display: none; }
+      .ozetler, .panel-iki, .alt-kartlar, .alanlar, .olcu-kartlar, .ikili, .dagilim-uc { grid-template-columns: 1fr; }
+      #gorunum-ayar .ayar-satir { grid-template-columns: 1fr; gap: 0.4rem; align-items: stretch; }
+      #gorunum-yardim .yardim-adimlar { grid-template-columns: 1fr; }
+      #gorunum-panel .panel-ozet { grid-template-columns: 1fr 1fr; }
+      #gorunum-panel .csv-sayilar { grid-template-columns: 1fr 1fr; }
+      #gorunum-panel .harita-ici,
+      #gorunum-panel .onizleme { grid-template-columns: 1fr; }
+      #gorunum-panel .panel-banner,
+      #gorunum-panel .banner-ust { flex-direction: column; align-items: stretch; }
+      #gorunum-panel .banner-ozellik { flex-direction: column; align-items: flex-start; gap: 0.4rem; }
+      #gorunum-panel .banner-ozellik li,
+      #gorunum-panel .banner-ozellik li + li { padding: 0; border: 0; }
+      #gorunum-aktar .sayaclar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #gorunum-aktar #yukleme > .dugme,
+      #gorunum-aktar #aktarim-hata-indir { width: 100%; justify-content: center; }
+      .baslik-satir, .sayfa-baslik { flex-direction: column; align-items: stretch; }
+      .cift { grid-template-columns: 1fr; }
+      #gorunum-detay .pasaport-kutu,
+      #detay-baglar { grid-template-columns: 1fr; }
+      #gorunum-panel > .kart .tablo-sarmal,
+      #gorunum-urunler .tablo-sarmal { display: none; }
+      .kartlar { display: grid; gap: 0.7rem; }
+      .urun-kart { padding: 0.85rem; border: 1px solid var(--cizgi); border-radius: 14px; background: #fff; }
+      .urun-kart h3 { margin: 0 0 0.35rem; }
+      .urun-kart p { margin: 0.15rem 0; color: var(--soluk); }
+      .urun-kart .islemler, .urun-kart .qr-dugme { margin-top: 0.55rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="kabuk">
+    <nav class="kenar" aria-label="Bölümler">
+      <a class="marka" href="#/">
+        <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
+          <path d="M16 27c0-6 6-9 10-14-6 0-10 2-12 6-2-4-6-6-12-6 4 5 10 8 10 14z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path>
+          <path d="M16 27V12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path>
+        </svg>
+        <span>
+          <strong>Mini DPP</strong>
+          <span>Dijital Ürün Pasaportu</span>
+        </span>
+      </a>
+      <a class="nav" href="#/" data-bolum="panel" aria-label="Ana Panel">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+        <span>Ana Panel</span>
+      </a>
+      <a class="nav" href="#/urunler" data-bolum="urunler" aria-label="Ürün Yönetimi">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 8h16v11H4zM8 8V6a4 4 0 0 1 8 0v2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+        <span>Ürün Yönetimi</span>
+      </a>
+      <a class="nav" href="#/ice-aktar" data-bolum="aktar" aria-label="CSV İçe Aktarma">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M7 3h7l5 5v13H7zM14 3v5h5M12 11v6M9.5 14.5 12 17l2.5-2.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"></path></svg>
+        <span>CSV İçe Aktarma</span>
+      </a>
+      <a class="nav" href="#/raporlar" data-bolum="rapor" aria-label="Raporlar ve Veri Kalitesi">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 19V9M12 19V5M19 19v-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+        <span>Raporlar ve Veri Kalitesi</span>
+      </a>
+      <a class="nav" href="#/ayarlar" data-bolum="ayar" aria-label="Ayarlar">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"></circle><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+        <span>Ayarlar</span>
+      </a>
+      <a class="nav" href="#/yardim" data-bolum="yardim" aria-label="Yardım ve Hakkında">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"></circle><path d="M9.5 9a2.5 2.5 0 1 1 3.2 2.4c-.7.3-1.2.9-1.2 1.6V14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><circle cx="12" cy="17" r="0.8" fill="currentColor"></circle></svg>
+        <span>Yardım ve Hakkında</span>
+      </a>
+      <svg class="yaprak-iz" viewBox="0 0 120 90" width="120" height="90" aria-hidden="true"><path d="M70 80c0-28 28-40 48-58-28 2-46 12-54 30-8-16-24-28-48-30 18 22 28 36 28 58z" fill="currentColor"></path></svg>
+      <p id="sistem" class="sistem"><i></i><span>Sistem kontrol ediliyor</span></p>
+    </nav>
+
+    <div class="ana">
+      <header class="ust">
+        <div class="arama" role="search">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" stroke-width="1.8"></circle><path d="M16 16l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+          <label class="sr-only" for="arama">GTIN, model, parti veya şehir</label>
+          <input id="arama" type="search" placeholder="GTIN, model, parti veya şehir ara..." autocomplete="off">
+        </div>
+        <div class="ust-sag">
+          <div class="zil-sarmal">
+            <button id="zil" class="zil" type="button" aria-expanded="false" aria-controls="zil-liste">
+              <span class="sr-only">Bildirimler</span>
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 16V10a6 6 0 1 1 12 0v6l1.5 2h-15zM10 19a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+              <span id="zil-sayi" class="zil-sayi" hidden>0</span>
+            </button>
+            <div id="zil-liste" class="zil-liste" hidden></div>
+          </div>
+          <span class="avatar" aria-hidden="true">A</span>
+        </div>
+      </header>
+
+      <div class="icerik">
+        <section id="gorunum-panel">
+          <div class="panel-banner">
+            <div class="banner-ust">
+              <div class="banner-sol">
+                <h1>Dijital Ürün Pasaportu Yönetim Paneli</h1>
+                <p>Denim ürünlerinin izlenebilirliğini, veri kalitesini ve dijital pasaportlarını tek noktadan yönetin.</p>
+              </div>
+              <div class="banner-dugmeler">
+                <a class="dugme" href="#/ice-aktar">CSV içe aktar</a>
+                <button id="disa-aktar" class="dugme ikincil" type="button">Dışa aktar</button>
+              </div>
+            </div>
+            <ul class="banner-ozellik">
+              <li>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2.2v2.2H14zM18 14H20.2v2.2H18zM14 18h2.2V20.2H14zM18 18H20.2V20.2H18z" fill="none" stroke="currentColor" stroke-width="1.6"></path></svg>
+                <span>İzlenebilirlik</span>
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 19 6.5v5.2c0 4.2-2.8 7.2-7 8.8-4.2-1.6-7-4.6-7-8.8V6.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path><path d="M8.8 12.1 11 14.2 15.3 9.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                <span>Veri Doğrulama</span>
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 20 8 12 12 4 8zM6.2 11.4 12 14.4 17.8 11.4M6.2 14.8 12 17.8 17.8 14.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"></path></svg>
+                <span>Dijital Pasaport</span>
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19c8-1 13-7 14-14-7 1-13 6-14 14z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path><path d="M9 15c2-2 4-4 6-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>
+                <span>Sürdürülebilirlik</span>
+              </li>
+            </ul>
+          </div>
+          <div class="panel-ozet">
+            <article class="ozet-kart"><span class="ozet-ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4-8 4-8-4zM4 12l8 4 8-4M4 16l8 4 8-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg></span><span class="ozet-metin"><span>Toplam ürün</span><strong id="ozet-toplam">—</strong><small>veritabanında</small></span></article>
+            <article class="ozet-kart"><span class="ozet-ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 7h11l-1.2 8H9.2L8 7zM8 7 7 4H4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg></span><span class="ozet-metin"><span>Model sayısı</span><strong id="ozet-model">—</strong><small>farklı model</small></span></article>
+            <article class="ozet-kart"><span class="ozet-ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 8h14v4H5zM5 12h14v4H5zM5 16h14v3H5z" fill="none" stroke="currentColor" stroke-width="1.8"></path></svg></span><span class="ozet-metin"><span>Parti sayısı</span><strong id="ozet-parti">—</strong><small>model ve parti</small></span></article>
+            <article class="ozet-kart"><span class="ozet-ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"></circle><path d="M8.5 12.2 11 14.5 15.5 9.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></span><span class="ozet-metin"><span>Geçerli kayıt</span><strong id="ozet-gecerli">—</strong><small id="ozet-gecerli-not">kayıtlı ürün</small></span></article>
+            <article class="ozet-kart" id="ozet-hatali-kart"><span class="ozet-ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"></circle><path d="M9 9l6 6M15 9l-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></span><span class="ozet-metin"><span>Hatalı CSV satırı</span><strong id="ozet-hatali">—</strong><small id="ozet-hatali-not">CSV sonucu yok</small></span></article>
+          </div>
+          <div class="panel-orta">
+            <article class="kart" aria-labelledby="csv-baslik">
+              <div class="harita-baslik">
+                <div class="kart-baslik">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M7 3h7l5 5v13H7zM14 3v5h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+                  <h2 id="csv-baslik">Son CSV içe aktarma sonucu</h2>
+                </div>
+                <a class="tumunu" href="#/ice-aktar">CSV ekranı</a>
+              </div>
+              <div id="csv-ozet"></div>
+            </article>
+            <article class="kart" aria-labelledby="kalite-ozet-baslik">
+              <div class="kart-baslik">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"></circle><path d="M8.5 12.2 11 14.5 15.5 9.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+                <h2 id="kalite-ozet-baslik">Veri kalitesi</h2>
+              </div>
+              <p id="kalite-skor" class="kalite-skor">—</p>
+              <div id="kalite-cubuk" class="ilerleme" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Kayıtlı ürün doğrulama oranı"><span id="kalite-dolu"></span></div>
+              <p id="kalite-not" class="liste-not">Kayıtlı ürünlerin GTIN, elyaf ve zorunlu alan kontrolü.</p>
+              <ul id="kalite-liste" class="kalite-liste"></ul>
+            </article>
+          </div>
+          <div class="panel-alt">
+            <article class="kart" aria-labelledby="onizleme-baslik">
+              <div class="harita-baslik">
+                <div class="kart-baslik">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 7h16v12H4zM8 7V5h8v2" fill="none" stroke="currentColor" stroke-width="1.8"></path></svg>
+                  <h2 id="onizleme-baslik">Dijital pasaport önizleme</h2>
+                </div>
+                <div id="onizleme-gecis" class="onizleme-gecis">
+                  <button id="onizleme-once" type="button" aria-label="Önceki ürün" disabled>‹</button>
+                  <span id="onizleme-sayac">0 / 0</span>
+                  <button id="onizleme-sonra" type="button" aria-label="Sonraki ürün" disabled>›</button>
+                </div>
+              </div>
+              <div id="onizleme"></div>
+            </article>
+            <article class="kart" aria-labelledby="yolculuk-baslik">
+              <div class="kart-baslik">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z" fill="none" stroke="currentColor" stroke-width="1.8"></path><circle cx="12" cy="11" r="1.6" fill="currentColor"></circle></svg>
+                <h2 id="yolculuk-baslik">Üretim haritası</h2>
+              </div>
+              <div class="harita-ici">
+                <div>
+                  <div class="harita-sahne">
+                    <svg id="harita" viewBox="0 0 100 62" role="img" aria-labelledby="yolculuk-baslik">
+                      <path id="kara" class="kara"></path>
+                    </svg>
+                    <div id="pinler" class="pin-katman"></div>
+                  </div>
+                  <p id="harita-disi" class="harita-disi" hidden></p>
+                </div>
+                <div>
+                  <h3 id="sehir-baslik">Şehirlere göre dağılım</h3>
+                  <div id="sehir-cubuk" class="sehir-liste"></div>
+                  <p id="sehir-ozet" class="sehir-ozet"></p>
+                </div>
+              </div>
+            </article>
+          </div>
+          <div class="panel-iki">
+            <article class="kart">
+              <div class="harita-baslik">
+                <div class="kart-baslik">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+                  <h2>Ürün işlemleri</h2>
+                </div>
+                <a class="tumunu" href="#/urunler">Tümünü gör</a>
+              </div>
+              <div id="panel-islemler" class="islem-sarmal"></div>
+            </article>
+            <article class="kart" aria-labelledby="aktivite-baslik">
+              <div class="harita-baslik">
+                <div class="kart-baslik">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"></circle><path d="M12 8v5l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+                  <h2 id="aktivite-baslik">Son aktiviteler</h2>
+                </div>
+                <a class="tumunu" href="#/raporlar">Tümünü gör</a>
+              </div>
+              <ul id="aktiviteler" class="zaman"></ul>
+            </article>
+          </div>
+        </section>
+
+        <section id="gorunum-urunler" hidden>
+          <div class="baslik-satir">
+            <div>
+              <h1>Ürün yönetimi</h1>
+              <p class="alt-baslik">Satıra basınca ürün detayı açılır. Karbon değeri bu listede yoktur.</p>
+            </div>
+            <a class="dugme" href="#/ice-aktar">CSV içe aktar</a>
+          </div>
+          <div class="kart">
+            <p id="yonetim-durum" class="durum" hidden></p>
+            <div class="filtreler">
+              <label>Model<select class="filtre-model" data-filtre="model" aria-label="Modele göre süz"></select></label>
+              <label>Parti<select class="filtre-parti" data-filtre="parti" aria-label="Partiye göre süz"></select></label>
+              <label>Üretim yeri<select class="filtre-yer" data-filtre="yer" aria-label="Üretim yerine göre süz"></select></label>
+              <label>Doğrulama<select class="filtre-durum" data-filtre="durum" aria-label="Doğrulama durumuna göre süz"><option value="">Tümü</option><option value="gecerli">Doğrulandı</option><option value="eksik">Eksik</option></select></label>
+              <label>Sırala<select class="sira-sec" aria-label="Sıralama alanı"><option value="gtin">GTIN</option><option value="modelAdi">Model</option><option value="batchNo">Parti</option><option value="uretimYeri">Üretim yeri</option><option value="pamuk">Elyaf</option><option value="version">Sürüm</option><option value="updatedAt">Güncelleme</option></select></label>
+              <button class="dugme ikincil sira-yon" type="button">A → Z</button>
+            </div>
+            <div class="filtre-ozet">
+              <p class="sonuc-sayisi">0 sonuç</p>
+              <div class="etiketler"></div>
+              <button class="dugme ikincil filtre-temizle" type="button" hidden>Filtreleri temizle</button>
+            </div>
+            <div class="tablo-sarmal">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col" data-sira="gtin"><button class="sira" type="button">GTIN</button></th>
+                    <th scope="col" data-sira="modelAdi"><button class="sira" type="button">Model</button></th>
+                    <th scope="col" data-sira="batchNo"><button class="sira" type="button">Parti</button></th>
+                    <th scope="col" data-sira="uretimYeri"><button class="sira" type="button">Üretim yeri</button></th>
+                    <th scope="col" data-sira="pamuk"><button class="sira" type="button">Elyaf</button></th>
+                    <th scope="col" data-sira="version"><button class="sira" type="button">Sürüm</button></th>
+                    <th scope="col" data-sira="updatedAt"><button class="sira" type="button">Güncelleme</button></th>
+                    <th scope="col">İşlemler</th>
+                    <th scope="col">QR</th>
+                  </tr>
+                </thead>
+                <tbody id="urunler-yonetim"></tbody>
+              </table>
+            </div>
+            <div id="kartlar-yonetim" class="kartlar"></div>
+            <nav class="sayfalama" hidden aria-label="Ürün sayfaları">
+              <button class="dugme ikincil sayfa-once" type="button">Önceki</button>
+              <span class="sayfa-bilgi"></span>
+              <button class="dugme ikincil sayfa-sonra" type="button">Sonraki</button>
+            </nav>
+          </div>
+        </section>
+
+        <section id="gorunum-aktar" hidden>
+          <div class="baslik-satir">
+            <div>
+              <h1>CSV içe aktarma</h1>
+              <p class="alt-baslik">Ürün verilerini yükle, doğrula ve geçerli kayıtları veri tabanına aktar.</p>
+            </div>
+          </div>
+          <div class="kart">
+            <form id="yukleme" class="yukleme">
+              <p class="liste-not">.csv biçimi · UTF-8 desteği · GTIN metin olarak işlenir</p>
+              <p class="liste-not">Başlık satırı 1. satırdır. Hata mesajı dosyadaki satır numarasını gösterir. Hatalı satır, diğer geçerli satırların kaydını engellemez. Aynı GTIN yeniden gelirse ürün çoğalmaz.</p>
+              <p class="liste-not">Beklenen sütunlar</p>
+              <ul class="sutunlar">
+                <li>gtin</li>
+                <li>model_adi</li>
+                <li>batch_no</li>
+                <li>elyaf_pamuk_yuzde</li>
+                <li>elyaf_elastan_yuzde</li>
+                <li>uretim_yeri</li>
+                <li>karbon_kg_co2e</li>
+              </ul>
+              <label class="birak" id="birak">
+                <input id="dosya" type="file" accept=".csv,text/csv" aria-label="CSV dosyası" aria-describedby="dosya-adi">
+                <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M12 16V6M8.5 9.5 12 6l3.5 3.5M5 16.5V19h14v-2.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                <strong>CSV dosyanı seç veya buraya bırak</strong>
+                <span id="dosya-adi" class="dosya-adi">Dosya seçilmedi</span>
+                <span class="dosya-sec">Dosya seç</span>
+              </label>
+              <p id="yukleme-durum" class="liste-not" role="status">Dosya bekleniyor.</p>
+              <button id="yukle" class="dugme" type="submit">Yükle</button>
+            </form>
+            <div id="sonuc" aria-live="polite">
+              <p id="yukleme-hata" class="uyari" hidden></p>
+              <div id="sayaclar" class="sayaclar"></div>
+              <p id="aktarim-ayrinti" class="liste-not" hidden></p>
+              <p id="hata-yok" class="bilgi" hidden>Tüm satırlar işlendi, hata yok.</p>
+              <h2 id="hata-baslik" class="hata-baslik" hidden>Hatalı satırlar</h2>
+              <div id="hatalar" class="hata-liste" hidden></div>
+              <button id="aktarim-hata-indir" class="dugme ikincil" type="button" hidden>Hata raporunu indir</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="gorunum-rapor" hidden>
+          <div class="baslik-satir">
+            <div>
+              <h1>Raporlar ve veri kalitesi</h1>
+              <p class="alt-baslik">Sayılar veritabanındaki ürünlerden ve bu tarayıcıda yapılan CSV içe aktarmalardan gelir.</p>
+            </div>
+          </div>
+          <div class="ozetler">
+            <article class="ozet-kart"><span class="ozet-metin"><span>Kayıtlı ürünler</span><strong id="rapor-urun">—</strong><small>Veritabanındaki toplam</small></span></article>
+            <article class="ozet-kart"><span class="ozet-metin"><span>Son CSV geçerliliği</span><strong id="rapor-oran">—</strong><small id="rapor-oran-not">İçe aktarma yok</small></span></article>
+            <article class="ozet-kart"><span class="ozet-metin"><span>Farklı modeller</span><strong id="rapor-model">—</strong><small>kayıtlı modeller</small></span></article>
+            <article class="ozet-kart"><span class="ozet-metin"><span>Reddedilen satırlar</span><strong id="rapor-red">—</strong><small id="rapor-red-not">son içe aktarma</small></span></article>
+          </div>
+          <article class="kart rapor-kategori">
+            <h2>İçe aktarma geçmişi</h2>
+            <p class="liste-not">Dosya adı, tarih, toplam satır, doğrulamayı geçen kayıt, reddedilen satır ve hata ayrıntıları.</p>
+            <div id="aktarim-gecmis"></div>
+          </article>
+          <article class="kart rapor-kategori">
+            <h2>Veri doğrulama raporu</h2>
+            <p class="liste-not">Geçersiz GTIN, elyaf toplamı, eksik alan ve diğer doğrulama sonuçları.</p>
+            <div id="dogrulama-rapor"></div>
+          </article>
+          <article class="kart rapor-kategori">
+            <h2>Üretim dağılımı</h2>
+            <p class="liste-not">Şehirlere, modellere ve partilere göre kayıtlı ürün sayısı.</p>
+            <div id="dagilim-rapor" class="dagilim-uc"></div>
+          </article>
+          <article class="kart rapor-kategori">
+            <h2>Doğrulama kayıtları</h2>
+            <p class="liste-not">Kayıtlı ürünlerin GTIN ve elyaf kontrolü ile son CSV'deki hatalı satırlar.</p>
+            <label class="dogrulama-ara">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" stroke-width="1.8"></circle><path d="M16 16l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+              <span class="sr-only">Doğrulama kaydı ara</span>
+              <input id="dogrulama-ara" type="search" placeholder="Model, GTIN veya şehir ara..." autocomplete="off">
+            </label>
+            <div class="tablo-sarmal">
+              <table class="dogrulama-tablo">
+                <thead>
+                  <tr>
+                    <th scope="col">Kayıt</th>
+                    <th scope="col">GTIN</th>
+                    <th scope="col">Elyaf</th>
+                    <th scope="col">Doğrulama</th>
+                    <th scope="col">Diğer</th>
+                  </tr>
+                </thead>
+                <tbody id="dogrulama"></tbody>
+              </table>
+            </div>
+          </article>
+          <article class="kart rapor-kategori">
+            <h2>Pasaport durumu</h2>
+            <p class="liste-not">HTML, JSON-LD ve QR bağlantıları. Sürüm ve son güncelleme kayıtlı üründendir.</p>
+            <div id="pasaport-rapor"></div>
+          </article>
+          <article class="kart rapor-kategori">
+            <h2>Tüm aktiviteler</h2>
+            <ul id="aktiviteler-tum" class="zaman"></ul>
+          </article>
+        </section>
+
+        <section id="gorunum-ayar" hidden>
+          <div class="baslik-satir">
+            <div>
+              <h1>Ayarlar</h1>
+              <p class="alt-baslik">Yönetim panelini kullanım tercihlerinize göre özelleştirin.</p>
+            </div>
+          </div>
+          <div class="ayar-sayfa">
+            <article class="kart ayar-kart" aria-labelledby="ayar-gorunum">
+              <h2 id="ayar-gorunum">Görünüm Tercihleri</h2>
+              <div class="ayar-satir">
+                <div>
+                  <label for="ayar-tema">Tema</label>
+                  <p id="ayar-tema-aciklama">Yönetim panelinin renk görünümünü değiştirir.</p>
+                </div>
+                <select id="ayar-tema" aria-describedby="ayar-tema-aciklama">
+                  <option value="acik">Açık</option>
+                  <option value="koyu">Koyu</option>
+                </select>
+              </div>
+              <div class="ayar-satir">
+                <div>
+                  <label for="ayar-tablo">Tablo yoğunluğu</label>
+                  <p id="ayar-tablo-aciklama">Ürün Yönetimi tablosundaki satır yüksekliğini ve hücre boşluklarını belirler.</p>
+                </div>
+                <select id="ayar-tablo" aria-describedby="ayar-tablo-aciklama">
+                  <option value="ferah">Ferah — geniş satırlar</option>
+                  <option value="sik">Kompakt — sık satırlar</option>
+                </select>
+              </div>
+              <div class="ayar-satir">
+                <div>
+                  <label for="ayar-tarih">Tarih biçimi</label>
+                  <p id="ayar-tarih-aciklama">Tablolarda ve işlem geçmişinde tarihlerin nasıl gösterileceğini belirler.</p>
+                </div>
+                <select id="ayar-tarih" aria-describedby="ayar-tarih-aciklama">
+                  <option value="gun">Yalnızca gün</option>
+                  <option value="gun-saat">Tarih ve saat</option>
+                </select>
+              </div>
+            </article>
+            <aside class="kart ayar-bilgi">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="8.25" fill="none" stroke="currentColor" stroke-width="1.7"></circle><path d="M12 11v5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path><circle cx="12" cy="8" r="0.9" fill="currentColor"></circle></svg>
+              <div>
+                <h2>Tercihler hakkında</h2>
+                <p>Seçimleriniz bu tarayıcıda otomatik olarak kaydedilir. Görünüm tercihleri ürün verilerini ve dijital pasaport içeriklerini değiştirmez.</p>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section id="gorunum-yardim" hidden>
+          <div class="baslik-satir">
+            <div>
+              <h1>Yardım &amp; Hakkında</h1>
+              <p class="alt-baslik">Mini Dijital Ürün Pasaportu sisteminin kullanım adımlarını, temel özelliklerini ve teknik altyapısını keşfedin.</p>
+            </div>
+          </div>
+          <section class="yardim-bolum" aria-labelledby="yardim-rehber">
+            <h2 id="yardim-rehber">Mini DPP Kullanım Rehberi</h2>
+            <div class="yardim-adimlar">
+              <article class="kart yardim-adim">
+                <div class="yardim-adim-ust">
+                  <span class="yardim-no">01</span>
+                  <span class="yardim-ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7zM14 3v5h5M12 11v6M9.5 14.5 12 17l2.5-2.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"></path></svg></span>
+                </div>
+                <h3>CSV Yükle</h3>
+                <p>Ürün bilgilerini CSV dosyasıyla sisteme aktar. GTIN, model, parti, üretim yeri, elyaf oranları ve karbon ayak izi bilgilerini içeren dosyayı seç.</p>
+              </article>
+              <article class="kart yardim-adim">
+                <div class="yardim-adim-ust">
+                  <span class="yardim-no">02</span>
+                  <span class="yardim-ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5 19 6.5v5.2c0 4.2-2.8 7.2-7 8.8-4.2-1.6-7-4.6-7-8.8V6.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path><path d="M8.8 12.1 11 14.2 15.3 9.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+                </div>
+                <h3>Verileri Doğrula</h3>
+                <p>Sistem GTIN kontrol basamağını, zorunlu alanları, pamuk ve elastan toplamının %100 olmasını ve karbon değerinin geçerliliğini kontrol eder. Hatalı satırlar raporlanır; geçerli satırlar işlenir.</p>
+              </article>
+              <article class="kart yardim-adim">
+                <div class="yardim-adim-ust">
+                  <span class="yardim-no">03</span>
+                  <span class="yardim-ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 4 20 8 12 12 4 8zM6.2 11.4 12 14.4 17.8 11.4M6.2 14.8 12 17.8 17.8 14.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"></path></svg></span>
+                </div>
+                <h3>Dijital Pasaportu Görüntüle</h3>
+                <p>Ürün Yönetimi sayfasından ilgili ürünün detayını aç. HTML dijital pasaportunu görüntüle, JSON-LD çıktısına eriş veya QR kodunu kullan.</p>
+              </article>
+              <article class="kart yardim-adim">
+                <div class="yardim-adim-ust">
+                  <span class="yardim-no">04</span>
+                  <span class="yardim-ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"></circle><path d="M12 8v4.5l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+                </div>
+                <h3>Sürüm Geçmişini İncele</h3>
+                <p>Ürün bilgileri değiştirildiğinde oluşan yeni sürümleri ve önceki kayıtları ürün detayındaki sürüm geçmişinden incele.</p>
+              </article>
+            </div>
+          </section>
+          <section class="yardim-bolum" aria-labelledby="yardim-sss">
+            <h2 id="yardim-sss">Sık Sorulan Sorular</h2>
+            <div class="yardim-sss">
+              <details class="kart yardim-soru">
+                <summary>
+                  <span>CSV dosyasında hatalı satır varsa ne olur?</span>
+                  <svg class="yardim-ok" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                </summary>
+                <p>Hatalı satırlar reddedilirken geçerli satırlar sisteme kaydedilir. Hataların nedenleri ve CSV dosyasındaki gerçek satır numaraları raporda gösterilir. Başlık satırı 1. satır olarak kabul edilir.</p>
+              </details>
+              <details class="kart yardim-soru">
+                <summary>
+                  <span>Karbon ayak izi neden görünmüyor?</span>
+                  <svg class="yardim-ok" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                </summary>
+                <p>Karbon ayak izi bilgisi standart dijital pasaport görünümünde gizlidir. Pasaport adresine ?rol=yetkili parametresi eklenerek görüntülenebilir. Bu özellik demo amaçlıdır; gerçek bir kullanıcı kimlik doğrulama sistemi değildir.</p>
+              </details>
+              <details class="kart yardim-soru">
+                <summary>
+                  <span>QR kodu ve JSON-LD ne işe yarar?</span>
+                  <svg class="yardim-ok" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                </summary>
+                <p>QR kodu tarandığında ilgili ürünün HTML dijital pasaport adresi açılır. Yönetim panelinde QR görseline tıklamak kodu büyütür. JSON-LD ise ürün bilgilerinin makineler tarafından okunabilen yapılandırılmış veri çıktısıdır.</p>
+              </details>
+              <details class="kart yardim-soru">
+                <summary>
+                  <span>Ürün sürüm geçmişi nasıl çalışır?</span>
+                  <svg class="yardim-ok" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                </summary>
+                <p>Aynı GTIN'e ait ürün bilgileri değiştiğinde yeni bir sürüm oluşturulur ve önceki bilgiler korunur. Ürün bilgileri değişmemişse gereksiz yeni sürüm oluşturulmaz. Sürüm geçmişi ürün detayından incelenebilir.</p>
+              </details>
+            </div>
+          </section>
+        </section>
+
+        <section id="gorunum-detay" hidden>
+          <div class="sayfa-baslik">
+            <div>
+              <a class="geri" href="#/urunler">
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 6 9 12l6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                Ürünlere dön
+              </a>
+              <p class="ust-etiket"><a href="#/urunler">Ürün yönetimi</a> / Ürün detayı</p>
+              <h1 id="detay-ad">—</h1>
+              <p id="detay-gtin" class="detay-gtin"></p>
+              <p id="detay-rozetler" class="rozet-satir"></p>
+            </div>
+            <a id="detay-pasaport" class="dugme detay-ana" href="#/urunler">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8M10 5H6v13h13v-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              Pasaportu aç
+            </a>
+          </div>
+          <p id="detay-durum" class="durum" hidden></p>
+          <div id="detay-icerik" hidden>
+            <div class="cift">
+              <article class="beyaz">
+                <h3>Parti numarası</h3>
+                <p id="detay-parti" class="buyuk-deger">—</p>
+              </article>
+              <article class="beyaz">
+                <h3>Üretim yeri</h3>
+                <p id="detay-yer" class="buyuk-deger">—</p>
+              </article>
+            </div>
+            <div class="cift">
+              <article class="beyaz">
+                <h3>Elyaf bileşimi</h3>
+                <div id="detay-cubuk" class="elyaf-cubuk" role="img" aria-label="Elyaf oranları"></div>
+                <div id="detay-elyaf-not" class="elyaf-satirlar"></div>
+              </article>
+              <article class="beyaz">
+                <h3>Pasaport doğrulama kontrolleri</h3>
+                <ul id="detay-kontrol"></ul>
+              </article>
+            </div>
+            <article class="beyaz pasaport-kart">
+              <h3>Dijital ürün pasaportu</h3>
+              <p class="liste-not">Ürün pasaportuna erişim</p>
+              <div class="pasaport-kutu">
+                <button id="detay-qr-dugme" type="button" aria-label="QR kodunu büyüt">
+                  <img id="detay-qr" alt="">
+                </button>
+                <div id="detay-baglar"></div>
+              </div>
+              <p class="kucuk-not">Tüketici görünümünde karbon bilgisi gizlenir. Yetkili demo görünümünde aynı kaydın karbon değeri gösterilir. Yetkili görünüm yalnızca demo amaçlıdır, gerçek yetkilendirme değildir.</p>
+            </article>
+            <div class="tuketici">
+              <div>
+                <strong>
+                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 20s6-4 6-9a6 6 0 0 0-12 0c0 5 6 9 6 9z" fill="none" stroke="currentColor" stroke-width="1.8"></path></svg>
+                  Tüketici görünümü
+                </strong>
+                <p>Bu üründe karbon bilgisi gösterilmemektedir.</p>
+              </div>
+              <span class="kilit">
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x="6" y="11" width="12" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="1.8"></path></svg>
+                Karbon bilgisi gizli
+              </span>
+            </div>
+            <div class="beyaz surum-kart">
+              <h3>Sürüm geçmişi</h3>
+              <ul id="detay-surumler"></ul>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <dialog id="qr-pencere" aria-label="QR kodu">
+    <button id="qr-kapat" class="dugme ikincil" type="button">Kapat</button>
+    <img id="qr-buyuk" alt="">
+  </dialog>
+
+  <script>
+    const DEPO = "mini-dpp-son-aktarim";
+    const AYAR_DEPO = "mini-dpp-ayar";
+    const BILDIRIM_DEPO = "mini-dpp-bildirim";
+    const gorunumler = {
+      panel: document.getElementById("gorunum-panel"),
+      urunler: document.getElementById("gorunum-urunler"),
+      aktar: document.getElementById("gorunum-aktar"),
+      rapor: document.getElementById("gorunum-rapor"),
+      ayar: document.getElementById("gorunum-ayar"),
+      yardim: document.getElementById("gorunum-yardim"),
+      detay: document.getElementById("gorunum-detay")
+    };
+    const arama = document.getElementById("arama");
+    const urunlerYonetim = document.getElementById("urunler-yonetim");
+    const kartlarYonetim = document.getElementById("kartlar-yonetim");
+    const yuklemeDurum = document.getElementById("yukleme-durum");
+    const aktarimHataIndir = document.getElementById("aktarim-hata-indir");
+    const ozetToplam = document.getElementById("ozet-toplam");
+    const ozetModel = document.getElementById("ozet-model");
+    const ozetParti = document.getElementById("ozet-parti");
+    const ozetGecerli = document.getElementById("ozet-gecerli");
+    const ozetGecerliNot = document.getElementById("ozet-gecerli-not");
+    const ozetHatali = document.getElementById("ozet-hatali");
+    const ozetHataliNot = document.getElementById("ozet-hatali-not");
+    const ozetHataliKart = document.getElementById("ozet-hatali-kart");
+    const modelHalka = document.getElementById("model-halka");
+    const modelListe = document.getElementById("model-liste");
+    const gecerlilikOran = document.getElementById("gecerlilik-oran");
+    const gecerlilikCubuk = document.getElementById("gecerlilik-cubuk");
+    const gecerlilikDolu = document.getElementById("gecerlilik-dolu");
+    const gecerlilikNot = document.getElementById("gecerlilik-not");
+    const gecerliSayi = document.getElementById("gecerli-sayi");
+    const gecerliEtiket = document.getElementById("gecerli-etiket");
+    const hataliSayi = document.getElementById("hatali-sayi");
+    const olcuKalite = document.getElementById("olcu-kalite");
+    const olcuKaliteNot = document.getElementById("olcu-kalite-not");
+    const olcuHata = document.getElementById("olcu-hata");
+    const olcuHataNot = document.getElementById("olcu-hata-not");
+    const olcuUrun = document.getElementById("olcu-urun");
+    const olcuModel = document.getElementById("olcu-model");
+    const dogrulama = document.getElementById("dogrulama");
+    const dogrulamaAra = document.getElementById("dogrulama-ara");
+    const aktiviteler = document.getElementById("aktiviteler");
+    const aktivitelerTum = document.getElementById("aktiviteler-tum");
+    const zil = document.getElementById("zil");
+    const zilListe = document.getElementById("zil-liste");
+    const zilSayi = document.getElementById("zil-sayi");
+    const sistem = document.getElementById("sistem");
+    const kara = document.getElementById("kara");
+    const pinler = document.getElementById("pinler");
+    const haritaDisi = document.getElementById("harita-disi");
+    const dosya = document.getElementById("dosya");
+    const dosyaAdi = document.getElementById("dosya-adi");
+    const birak = document.getElementById("birak");
+    const yukleme = document.getElementById("yukleme");
+    const yukle = document.getElementById("yukle");
+    const sayaclar = document.getElementById("sayaclar");
+    const hatalar = document.getElementById("hatalar");
+    const hataBaslik = document.getElementById("hata-baslik");
+    const aktarimAyrinti = document.getElementById("aktarim-ayrinti");
+    const hataYok = document.getElementById("hata-yok");
+    const yuklemeHata = document.getElementById("yukleme-hata");
+    const aktarimGecmis = document.getElementById("aktarim-gecmis");
+    const dogrulamaRapor = document.getElementById("dogrulama-rapor");
+    const dagilimRapor = document.getElementById("dagilim-rapor");
+    const pasaportRapor = document.getElementById("pasaport-rapor");
+    const raporUrun = document.getElementById("rapor-urun");
+    const raporOran = document.getElementById("rapor-oran");
+    const raporOranNot = document.getElementById("rapor-oran-not");
+    const raporModel = document.getElementById("rapor-model");
+    const raporRed = document.getElementById("rapor-red");
+    const raporRedNot = document.getElementById("rapor-red-not");
+    const qrPencere = document.getElementById("qr-pencere");
+    const qrBuyuk = document.getElementById("qr-buyuk");
+    const qrKapat = document.getElementById("qr-kapat");
+    let tumKayitlar = [];
+    let sonRapor = raporuOku();
+    let aktarimTaze = false;
+    let ayar = ayarOku();
+    ayarUygula();
+    let detayIstek = 0;
+    const SAYFA = 8;
+    let sayfa = 1;
+    const sira = { alan: "gtin", yon: 1 };
+    const filtre = { model: "", parti: "", yer: "", durum: "" };
+
+    function temizle(oge) { while (oge.firstChild) oge.removeChild(oge.firstChild); }
+    function metin(deger) { return deger === null || deger === undefined ? "" : String(deger); }
+    function yuzde(deger) {
+      const sayi = Number(deger);
+      if (!Number.isFinite(sayi)) return metin(deger);
+      return sayi.toLocaleString("tr-TR", { maximumFractionDigits: 2 });
+    }
+    function csvMi(file) { return !!file && /\.csv$/i.test(file.name); }
+    function gtinAdresi(gtin, ek) { return "/dpp/" + gtin + ek; }
+    function gtinKontrolGecerli(gtin) {
+      if (!/^\d{14}$/.test(gtin)) return false;
+      let toplam = 0;
+      for (let i = 0; i < 13; i++) {
+        toplam += (gtin.charCodeAt(i) - 48) * (i % 2 === 0 ? 3 : 1);
+      }
+      const beklenen = (10 - (toplam % 10)) % 10;
+      return gtin.charCodeAt(13) - 48 === beklenen;
+    }
+    function gecerliGtin(gtin) { return gtinKontrolGecerli(gtin); }
+    function kayitKontrolleri(urun) {
+      const gtinTamam = gtinKontrolGecerli(metin(urun.gtin));
+      const pamuk = Number(urun.pamuk);
+      const elastan = Number(urun.elastan);
+      const elyafTamam = Number.isFinite(pamuk) && Number.isFinite(elastan) && Math.abs(pamuk + elastan - 100) < 0.001;
+      const alanTamam = metin(urun.modelAdi).trim().length > 0
+        && metin(urun.batchNo).trim().length > 0
+        && metin(urun.uretimYeri).trim().length > 0;
+      return { gtinTamam, elyafTamam, alanTamam, tamam: gtinTamam && elyafTamam && alanTamam };
+    }
+
+    function tarihParcalari(deger) {
+      const tarih = new Date(deger);
+      if (Number.isNaN(tarih.getTime())) return null;
+      return {
+        an: tarih.getTime(),
+        gun: tarih.toLocaleDateString("tr-TR"),
+        saat: tarih.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })
+      };
+    }
+    function tarihMetni(deger) {
+      const parca = tarihParcalari(deger);
+      if (!parca) return metin(deger);
+      return ayar.tarih === "gun" ? parca.gun : parca.gun + " · " + parca.saat;
+    }
+
+    function hucre(deger, sinif) {
+      const td = document.createElement("td");
+      td.textContent = metin(deger);
+      if (sinif) td.className = sinif;
+      return td;
+    }
+
+    function depoOku() {
+      try { return JSON.parse(localStorage.getItem(DEPO) || "null"); }
+      catch { return null; }
+    }
+    function gecerliRapor(kayit) {
+      return !!kayit && typeof kayit.toplamSatir === "number";
+    }
+    function gecmisiOku() {
+      const veri = depoOku();
+      if (!veri) return [];
+      if (Array.isArray(veri.gecmis)) return veri.gecmis.filter(gecerliRapor);
+      return gecerliRapor(veri) ? [veri] : [];
+    }
+    function raporuOku() {
+      return gecmisiOku()[0] || null;
+    }
+    function gecmisiYaz(gecmis) {
+      try { localStorage.setItem(DEPO, JSON.stringify({ gecmis })); } catch { /* depo kapalıysa ekran yine güncel sonucu gösterir */ }
+    }
+    function damgasiVar(kayit) {
+      return !!kayit && typeof kayit.damga === "string";
+    }
+    function urunDamgasi(kayitlar) {
+      return kayitlar
+        .map((urun) => metin(urun.gtin) + "|" + metin(urun.version) + "|" + metin(urun.updatedAt))
+        .sort()
+        .join("\n");
+    }
+    function aktarimiUnut() {
+      sonRapor = null;
+      try { localStorage.removeItem(DEPO); } catch { /* sonuç zaten ekranda gösterilmez */ }
+    }
+    function raporuSakla(rapor, dosyaAdi) {
+      const kayit = {
+        toplamSatir: rapor.toplamSatir,
+        basarili: rapor.basarili,
+        hatali: rapor.hatali,
+        guncellenen: rapor.guncellenen,
+        degisiklikYok: rapor.degisiklikYok,
+        hatalar: Array.isArray(rapor.hatalar) ? rapor.hatalar : [],
+        dosyaAdi: metin(dosyaAdi),
+        zaman: new Date().toISOString(),
+        damga: ""
+      };
+      aktarimTaze = true;
+      const onceki = gecmisiOku().filter(damgasiVar);
+      const gecmis = [kayit, ...onceki].slice(0, 20);
+      sonRapor = kayit;
+      gecmisiYaz(gecmis);
+    }
+    function aktarimDamgasiniIsle(kayitlar) {
+      const damga = urunDamgasi(kayitlar);
+      if (aktarimTaze && sonRapor) {
+        sonRapor.damga = damga;
+        const gecmis = gecmisiOku();
+        gecmis[0] = sonRapor;
+        gecmisiYaz(gecmis);
+        aktarimTaze = false;
+        return;
+      }
+      if (sonRapor && (!damgasiVar(sonRapor) || sonRapor.damga !== damga)) aktarimiUnut();
+    }
+    function aktarimEkraniniYaz() {
+      if (sonRapor) {
+        sonucuGoster(sonRapor);
+        if (yuklemeDurum.textContent !== "İçe aktarma tamamlandı.") {
+          yuklemeDurum.textContent = "Bu tarayıcıdaki son içe aktarma sonucu.";
+        }
+        return;
+      }
+      ozetKartlari(null);
+      temizle(hatalar);
+      hatalar.hidden = true;
+      hataBaslik.hidden = true;
+      aktarimAyrinti.hidden = true;
+      aktarimAyrinti.textContent = "";
+      hataYok.hidden = true;
+      aktarimHataIndir.hidden = true;
+      if (yuklemeDurum.textContent === "Bu tarayıcıdaki son içe aktarma sonucu.") {
+        yuklemeDurum.textContent = "Dosya bekleniyor.";
+      }
+    }
+    function ayarOku() {
+      const varsayilan = { tema: "acik", tablo: "ferah", tarih: "gun-saat" };
+      try {
+        const veri = JSON.parse(localStorage.getItem(AYAR_DEPO) || "null");
+        if (!veri) return varsayilan;
+        return {
+          tema: veri.tema === "koyu" ? "koyu" : "acik",
+          tablo: veri.tablo === "sik" ? "sik" : "ferah",
+          tarih: veri.tarih === "gun" ? "gun" : "gun-saat"
+        };
+      } catch { return varsayilan; }
+    }
+    function ayarUygula() {
+      document.documentElement.dataset.tema = ayar.tema;
+      document.documentElement.dataset.yogunluk = ayar.tablo;
+      const tema = document.getElementById("ayar-tema");
+      const tablo = document.getElementById("ayar-tablo");
+      const tarih = document.getElementById("ayar-tarih");
+      if (tema) tema.value = ayar.tema;
+      if (tablo) tablo.value = ayar.tablo;
+      if (tarih) tarih.value = ayar.tarih;
+    }
+
+    function elyafKutu(pamuk, elastan) {
+      const kutu = document.createElement("div");
+      kutu.className = "elyaf";
+      const cubuk = document.createElement("span");
+      cubuk.className = "cubuk";
+      cubuk.setAttribute("aria-hidden", "true");
+      const p = Number(pamuk);
+      const e = Number(elastan);
+      const pSayi = Number.isFinite(p) ? p : 0;
+      const eSayi = Number.isFinite(e) ? e : 0;
+      const toplam = pSayi + eSayi;
+      const pDil = document.createElement("span");
+      pDil.className = "dilim dilim-pamuk";
+      const eDil = document.createElement("span");
+      eDil.className = "dilim dilim-elastan";
+      if (toplam > 0) {
+        pDil.style.width = (pSayi / toplam * 100) + "%";
+        eDil.style.width = (eSayi / toplam * 100) + "%";
+      }
+      cubuk.append(pDil, eDil);
+      const etiketler = document.createElement("span");
+      etiketler.className = "elyaf-etiketler";
+      const pamukYazi = document.createElement("span");
+      const elastanYazi = document.createElement("span");
+      pamukYazi.append(kalin("Pamuk "), document.createTextNode(yuzde(pamuk) + "%"));
+      elastanYazi.append(kalin("Elastan "), document.createTextNode(yuzde(elastan) + "%"));
+      etiketler.append(pamukYazi, elastanYazi);
+      kutu.append(cubuk, etiketler);
+      return kutu;
+    }
+    function kalin(yazi) {
+      const b = document.createElement("b");
+      b.textContent = yazi;
+      return b;
+    }
+
+    function tarihHucre(deger) {
+      const td = document.createElement("td");
+      td.className = "tarih";
+      const parca = tarihParcalari(deger);
+      if (!parca) { td.textContent = metin(deger); return td; }
+      const gun = document.createElement("span");
+      gun.textContent = parca.gun;
+      td.append(gun);
+      if (ayar.tarih !== "gun") {
+        const saat = document.createElement("span");
+        saat.textContent = parca.saat;
+        td.append(saat);
+      }
+      return td;
+    }
+
+    function menuleriKapat() {
+      document.querySelectorAll(".menu-liste").forEach((oge) => { oge.hidden = true; });
+      document.querySelectorAll(".nokta").forEach((oge) => oge.setAttribute("aria-expanded", "false"));
+    }
+
+    function menuDugmesi(gtin) {
+      const sarmal = document.createElement("div");
+      sarmal.className = "menu";
+      const dugme = document.createElement("button");
+      dugme.type = "button";
+      dugme.className = "nokta";
+      dugme.setAttribute("aria-label", "Diğer işlemler");
+      dugme.setAttribute("aria-expanded", "false");
+      dugme.append(noktaSvg());
+      const acilir = document.createElement("div");
+      acilir.className = "menu-liste";
+      acilir.hidden = true;
+      acilir.append(
+        menuBag("JSON-LD", gtinAdresi(gtin, ".jsonld")),
+        menuBag("Yetkili görünüm", gtinAdresi(gtin, "?rol=yetkili")),
+        menuBag("Sürümler", "/api/products/" + gtin + "/versions"));
+      dugme.addEventListener("click", (olay) => {
+        olay.stopPropagation();
+        const acilacak = acilir.hidden;
+        menuleriKapat();
+        if (!acilacak) return;
+        acilir.hidden = false;
+        const yer = dugme.getBoundingClientRect();
+        acilir.style.top = (yer.bottom + 6) + "px";
+        acilir.style.left = Math.max(8, yer.right - 180) + "px";
+        dugme.setAttribute("aria-expanded", "true");
+      });
+      sarmal.append(dugme, acilir);
+      sarmal.addEventListener("click", (olay) => olay.stopPropagation());
+      return sarmal;
+    }
+    function noktaSvg() {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "0 0 24 24");
+      svg.setAttribute("width", "16");
+      svg.setAttribute("height", "16");
+      svg.setAttribute("aria-hidden", "true");
+      [6, 12, 18].forEach((cy) => {
+        const daire = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        daire.setAttribute("cx", "12");
+        daire.setAttribute("cy", String(cy));
+        daire.setAttribute("r", "1.4");
+        daire.setAttribute("fill", "currentColor");
+        svg.append(daire);
+      });
+      return svg;
+    }
+    function menuBag(etiket, adres) {
+      const a = document.createElement("a");
+      a.textContent = etiket;
+      a.href = adres;
+      a.addEventListener("click", (olay) => olay.stopPropagation());
+      return a;
+    }
+
+    function qrDugmesi(gtin) {
+      const dugme = document.createElement("button");
+      dugme.type = "button";
+      dugme.className = "qr-dugme";
+      dugme.setAttribute("aria-label", "QR kodunu büyüt");
+      const img = document.createElement("img");
+      img.alt = "";
+      img.src = gtinAdresi(gtin, ".png");
+      dugme.append(img);
+      dugme.addEventListener("click", (olay) => {
+        olay.stopPropagation();
+        qrBuyuk.src = img.src;
+        qrBuyuk.alt = "QR kodu " + gtin;
+        if (typeof qrPencere.showModal === "function") qrPencere.showModal();
+      });
+      return dugme;
+    }
+
+    function islemler(gtin) {
+      const kutu = document.createElement("div");
+      kutu.className = "islemler";
+      if (!gecerliGtin(gtin)) return kutu;
+      const pasaport = document.createElement("a");
+      pasaport.className = "pasaport";
+      pasaport.href = gtinAdresi(gtin, "");
+      pasaport.textContent = "Pasaportu aç";
+      pasaport.addEventListener("click", (olay) => olay.stopPropagation());
+      kutu.append(pasaport, menuDugmesi(gtin));
+      kutu.addEventListener("click", (olay) => olay.stopPropagation());
+      return kutu;
+    }
+
+    function urunSatiri(urun) {
+      const gtin = metin(urun.gtin);
+      const satir = document.createElement("tr");
+      const model = document.createElement("td");
+      const bag = document.createElement("a");
+      bag.className = "model-link";
+      bag.href = "#/urun/" + gtin;
+      bag.textContent = metin(urun.modelAdi);
+      bag.addEventListener("click", (olay) => olay.stopPropagation());
+      model.append(bag);
+      const elyaf = document.createElement("td");
+      elyaf.append(elyafKutu(urun.pamuk, urun.elastan));
+      const surum = document.createElement("td");
+      const rozet = document.createElement("span");
+      rozet.className = "rozet";
+      rozet.textContent = "v" + metin(urun.version);
+      surum.append(rozet);
+      const islem = document.createElement("td");
+      islem.append(islemler(gtin));
+      satir.append(hucre(gtin, "gtin"), model, hucre(urun.batchNo), hucre(urun.uretimYeri), elyaf, surum, tarihHucre(urun.updatedAt), islem, qrHucre(gtin));
+      satir.addEventListener("click", () => { location.hash = "#/urun/" + gtin; });
+      return satir;
+    }
+    function qrHucre(gtin) {
+      const td = document.createElement("td");
+      if (gecerliGtin(gtin)) td.append(qrDugmesi(gtin));
+      return td;
+    }
+    function urunKarti(urun) {
+      const gtin = metin(urun.gtin);
+      const kart = document.createElement("article");
+      kart.className = "urun-kart";
+      const baslik = document.createElement("h3");
+      const bag = document.createElement("a");
+      bag.className = "model-link";
+      bag.href = "#/urun/" + gtin;
+      bag.textContent = metin(urun.modelAdi);
+      baslik.append(bag);
+      const yer = document.createElement("p");
+      yer.textContent = metin(urun.batchNo) + " · " + metin(urun.uretimYeri);
+      const kimlik = document.createElement("p");
+      kimlik.textContent = gtin;
+      kart.append(baslik, kimlik, yer, elyafKutu(urun.pamuk, urun.elastan), islemler(gtin));
+      if (gecerliGtin(gtin)) kart.append(qrDugmesi(gtin));
+      kart.addEventListener("click", () => { location.hash = "#/urun/" + gtin; });
+      return kart;
+    }
+
+    function benzersizAlan(kayitlar, alan) {
+      return [...new Set(kayitlar.map((urun) => metin(urun[alan])).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, "tr"));
+    }
+    function secenekDoldur(sinif, degerler, secili) {
+      document.querySelectorAll("." + sinif).forEach((secim) => {
+        temizle(secim);
+        const tumu = document.createElement("option");
+        tumu.value = "";
+        tumu.textContent = "Tümü";
+        secim.append(tumu);
+        degerler.forEach((deger) => {
+          const secenek = document.createElement("option");
+          secenek.value = deger;
+          secenek.textContent = deger;
+          secim.append(secenek);
+        });
+        secim.value = degerler.includes(secili) ? secili : "";
+      });
+    }
+    function secenekleriYaz(kayitlar) {
+      const modeller = benzersizAlan(kayitlar, "modelAdi");
+      const partiler = benzersizAlan(kayitlar, "batchNo");
+      const yerler = benzersizAlan(kayitlar, "uretimYeri");
+      if (!modeller.includes(filtre.model)) filtre.model = "";
+      if (!partiler.includes(filtre.parti)) filtre.parti = "";
+      if (!yerler.includes(filtre.yer)) filtre.yer = "";
+      secenekDoldur("filtre-model", modeller, filtre.model);
+      secenekDoldur("filtre-parti", partiler, filtre.parti);
+      secenekDoldur("filtre-yer", yerler, filtre.yer);
+      document.querySelectorAll(".filtre-durum").forEach((secim) => { secim.value = filtre.durum; });
+      document.querySelectorAll(".sira-sec").forEach((secim) => { secim.value = sira.alan; });
+      document.querySelectorAll(".sira-yon").forEach((dugme) => {
+        dugme.textContent = sira.yon > 0 ? "A → Z" : "Z → A";
+      });
+    }
+    function karsilastir(a, b) {
+      const alan = sira.alan;
+      let av;
+      let bv;
+      if (alan === "pamuk" || alan === "version") {
+        av = Number(a[alan]);
+        bv = Number(b[alan]);
+      } else if (alan === "updatedAt") {
+        av = Date.parse(a.updatedAt) || 0;
+        bv = Date.parse(b.updatedAt) || 0;
+      } else {
+        av = metin(a[alan]).toLocaleLowerCase("tr");
+        bv = metin(b[alan]).toLocaleLowerCase("tr");
+      }
+      if (av < bv) return -sira.yon;
+      if (av > bv) return sira.yon;
+      return metin(a.gtin).localeCompare(metin(b.gtin), "tr");
+    }
+    function gorunenKayitlar(kayitlar) {
+      const sorgu = arama.value.trim().toLocaleLowerCase("tr");
+      return kayitlar.filter((urun) => {
+        if (filtre.model && metin(urun.modelAdi) !== filtre.model) return false;
+        if (filtre.parti && metin(urun.batchNo) !== filtre.parti) return false;
+        if (filtre.yer && metin(urun.uretimYeri) !== filtre.yer) return false;
+        const kontrol = kayitKontrolleri(urun);
+        if (filtre.durum === "gecerli" && !kontrol.tamam) return false;
+        if (filtre.durum === "eksik" && kontrol.tamam) return false;
+        if (!sorgu) return true;
+        return metin(urun.gtin).toLocaleLowerCase("tr").includes(sorgu)
+          || metin(urun.modelAdi).toLocaleLowerCase("tr").includes(sorgu)
+          || metin(urun.batchNo).toLocaleLowerCase("tr").includes(sorgu)
+          || metin(urun.uretimYeri).toLocaleLowerCase("tr").includes(sorgu);
+      }).sort(karsilastir);
+    }
+    function etkinFiltreler() {
+      const liste = [];
+      if (arama.value.trim()) liste.push({ tur: "arama", yazi: "Arama: " + arama.value.trim() });
+      if (filtre.model) liste.push({ tur: "model", yazi: "Model: " + filtre.model });
+      if (filtre.parti) liste.push({ tur: "parti", yazi: "Parti: " + filtre.parti });
+      if (filtre.yer) liste.push({ tur: "yer", yazi: "Üretim yeri: " + filtre.yer });
+      if (filtre.durum === "gecerli") liste.push({ tur: "durum", yazi: "Doğrulama: Doğrulandı" });
+      if (filtre.durum === "eksik") liste.push({ tur: "durum", yazi: "Doğrulama: Eksik" });
+      return liste;
+    }
+    function etiketDugmesi(etiket) {
+      const dugme = document.createElement("button");
+      dugme.type = "button";
+      dugme.className = "filtre-etiket";
+      dugme.dataset.tur = etiket.tur;
+      dugme.setAttribute("aria-label", etiket.yazi + " filtresini kaldır");
+      dugme.append(document.createTextNode(etiket.yazi + " "));
+      const kapat = document.createElement("span");
+      kapat.setAttribute("aria-hidden", "true");
+      kapat.textContent = "×";
+      dugme.append(kapat);
+      return dugme;
+    }
+    function etiketleriYaz(adet) {
+      const liste = etkinFiltreler();
+      document.querySelectorAll(".sonuc-sayisi").forEach((oge) => { oge.textContent = adet + " sonuç"; });
+      document.querySelectorAll(".filtre-temizle").forEach((dugme) => { dugme.hidden = liste.length === 0; });
+      document.querySelectorAll(".etiketler").forEach((kutu) => {
+        temizle(kutu);
+        liste.forEach((etiket) => kutu.append(etiketDugmesi(etiket)));
+      });
+    }
+    function filtreleriTemizle() {
+      arama.value = "";
+      filtre.model = "";
+      filtre.parti = "";
+      filtre.yer = "";
+      filtre.durum = "";
+      sayfa = 1;
+      cizListe(tumKayitlar);
+    }
+    function sayfalamayiYaz(toplam) {
+      const sayfaSayisi = Math.max(1, Math.ceil(toplam / SAYFA));
+      if (sayfa > sayfaSayisi) sayfa = sayfaSayisi;
+      document.querySelectorAll(".sayfalama").forEach((nav) => {
+        nav.hidden = toplam <= SAYFA;
+        const bas = toplam === 0 ? 0 : (sayfa - 1) * SAYFA + 1;
+        const son = Math.min(sayfa * SAYFA, toplam);
+        nav.querySelector(".sayfa-bilgi").textContent = bas + "–" + son + " / " + toplam;
+        nav.querySelector(".sayfa-once").disabled = sayfa <= 1;
+        nav.querySelector(".sayfa-sonra").disabled = sayfa >= sayfaSayisi;
+      });
+    }
+    function sirayiIsaretle() {
+      document.querySelectorAll("th[data-sira]").forEach((baslik) => {
+        if (baslik.dataset.sira === sira.alan) baslik.setAttribute("aria-sort", sira.yon > 0 ? "ascending" : "descending");
+        else baslik.removeAttribute("aria-sort");
+      });
+    }
+
+    function cizListe(kayitlar) {
+      temizle(urunlerYonetim);
+      temizle(kartlarYonetim);
+      secenekleriYaz(kayitlar);
+      sirayiIsaretle();
+      const gorunen = gorunenKayitlar(kayitlar);
+      const sayfaSayisi = Math.max(1, Math.ceil(gorunen.length / SAYFA));
+      if (sayfa > sayfaSayisi) sayfa = sayfaSayisi;
+      if (sayfa < 1) sayfa = 1;
+      const dilim = gorunen.slice((sayfa - 1) * SAYFA, sayfa * SAYFA);
+      etiketleriYaz(gorunen.length);
+      const yonetimDurum = document.getElementById("yonetim-durum");
+      if (kayitlar.length === 0) {
+        yonetimDurum.hidden = false;
+        yonetimDurum.className = "durum durum-bos";
+        yonetimDurum.textContent = "Henüz ürün yok";
+      } else if (gorunen.length === 0) {
+        yonetimDurum.hidden = false;
+        yonetimDurum.className = "durum";
+        yonetimDurum.textContent = "Aramanızla eşleşen ürün yok.";
+      } else {
+        yonetimDurum.hidden = true;
+        yonetimDurum.textContent = "";
+        for (const urun of dilim) {
+          urunlerYonetim.append(urunSatiri(urun));
+          kartlarYonetim.append(urunKarti(urun));
+        }
+      }
+      sayfalamayiYaz(gorunen.length);
+      sonUrunleriCiz(kayitlar);
+      yolculuguCiz(kayitlar);
+    }
+
+    function siraliUrunler(kayitlar) {
+      return kayitlar.slice().sort((a, b) => {
+        const fark = (Date.parse(b.updatedAt) || 0) - (Date.parse(a.updatedAt) || 0);
+        return fark || metin(a.gtin).localeCompare(metin(b.gtin), "tr");
+      });
+    }
+
+    function sonUcUrun(kayitlar) {
+      return siraliUrunler(kayitlar).slice(0, 3);
+    }
+
+    let onizlemeListe = [];
+    let onizlemeSira = 0;
+
+    function sonUrunleriCiz(kayitlar) {
+      panelIslemleriniCiz(kayitlar);
+      const liste = siraliUrunler(kayitlar);
+      const secili = onizlemeListe[onizlemeSira] ? metin(onizlemeListe[onizlemeSira].gtin) : "";
+      onizlemeListe = liste;
+      const bulunan = liste.findIndex((urun) => metin(urun.gtin) === secili);
+      onizlemeSira = bulunan >= 0 ? bulunan : 0;
+      onizlemeGecisiniYaz();
+      onizlemeyiCiz(liste[onizlemeSira] || null);
+    }
+
+    function onizlemeGecisiniYaz() {
+      const sayac = document.getElementById("onizleme-sayac");
+      const once = document.getElementById("onizleme-once");
+      const sonra = document.getElementById("onizleme-sonra");
+      const adet = onizlemeListe.length;
+      sayac.textContent = adet === 0 ? "0 / 0" : (onizlemeSira + 1) + " / " + adet;
+      once.disabled = adet <= 1;
+      sonra.disabled = adet <= 1;
+    }
+
+    function onizlemeKaydir(yon) {
+      if (onizlemeListe.length <= 1) return;
+      onizlemeSira = (onizlemeSira + yon + onizlemeListe.length) % onizlemeListe.length;
+      onizlemeGecisiniYaz();
+      onizlemeyiCiz(onizlemeListe[onizlemeSira]);
+    }
+
+    function panelIslemleriniCiz(kayitlar) {
+      const kutu = document.getElementById("panel-islemler");
+      temizle(kutu);
+      const sirali = siraliUrunler(kayitlar);
+      if (sirali.length === 0) {
+        const bos = document.createElement("p");
+        bos.className = "liste-not";
+        bos.textContent = "Henüz ürün yok";
+        kutu.append(bos);
+        return;
+      }
+      const tablo = document.createElement("table");
+      const baslik = document.createElement("thead");
+      const baslikSatir = document.createElement("tr");
+      ["Model", "GTIN", "Parti", "Üretim yeri", "Sürüm", "Pasaport"].forEach((ad) => {
+        const th = document.createElement("th");
+        th.scope = "col";
+        th.textContent = ad;
+        baslikSatir.append(th);
+      });
+      baslik.append(baslikSatir);
+      const govde = document.createElement("tbody");
+      sirali.forEach((urun) => {
+        const gtin = metin(urun.gtin);
+        const satir = document.createElement("tr");
+        const model = document.createElement("td");
+        const modelBag = document.createElement("a");
+        modelBag.href = "#/urun/" + gtin;
+        modelBag.textContent = metin(urun.modelAdi);
+        model.append(modelBag);
+        const pasaport = document.createElement("td");
+        const html = document.createElement("a");
+        html.href = gtinAdresi(gtin, "");
+        html.textContent = "HTML";
+        const json = document.createElement("a");
+        json.href = gtinAdresi(gtin, ".jsonld");
+        json.textContent = "JSON-LD";
+        json.style.marginLeft = "0.45rem";
+        pasaport.append(html, json);
+        satir.append(model, hucre(gtin, "gtin"), hucre(urun.batchNo), hucre(urun.uretimYeri), hucre("v" + metin(urun.version)), pasaport);
+        govde.append(satir);
+      });
+      tablo.append(baslik, govde);
+      kutu.append(tablo);
+    }
+
+    function onizlemeAlani(ad, deger) {
+      const satir = document.createElement("div");
+      const dt = document.createElement("dt");
+      dt.textContent = ad;
+      const dd = document.createElement("dd");
+      dd.textContent = deger;
+      satir.append(dt, dd);
+      return satir;
+    }
+
+    function onizlemeyiCiz(urun) {
+      const kutu = document.getElementById("onizleme");
+      temizle(kutu);
+      if (!urun) {
+        const bos = document.createElement("p");
+        bos.className = "liste-not";
+        bos.textContent = "Kayıtlı ürün yok. CSV ile ürün eklenince pasaport burada seçilebilir.";
+        kutu.append(bos);
+        return;
+      }
+      const gtin = metin(urun.gtin);
+      const govde = document.createElement("div");
+      govde.className = "onizleme";
+      const bilgi = document.createElement("div");
+      const ad = document.createElement("h3");
+      ad.textContent = metin(urun.modelAdi);
+      const liste = document.createElement("dl");
+      liste.append(
+        onizlemeAlani("GTIN", gtin),
+        onizlemeAlani("Parti", metin(urun.batchNo)),
+        onizlemeAlani("Üretim yeri", metin(urun.uretimYeri)),
+        onizlemeAlani("Sürüm", "v" + metin(urun.version)));
+      bilgi.append(ad, liste);
+      const qr = document.createElement("img");
+      qr.src = gtinAdresi(gtin, ".png");
+      qr.alt = metin(urun.modelAdi) + " QR kodu";
+      qr.width = 112;
+      qr.height = 112;
+      const qrDugme = document.createElement("button");
+      qrDugme.type = "button";
+      qrDugme.className = "onizleme-qr";
+      qrDugme.setAttribute("aria-label", "QR kodunu büyüt");
+      qrDugme.append(qr);
+      qrDugme.addEventListener("click", () => {
+        qrBuyuk.src = qr.src;
+        qrBuyuk.alt = qr.alt || "QR kodu";
+        if (typeof qrPencere.showModal === "function") qrPencere.showModal();
+      });
+      govde.append(bilgi, qrDugme);
+      const dugmeler = document.createElement("div");
+      dugmeler.className = "onizleme-dugmeler";
+      const html = document.createElement("a");
+      html.className = "dugme";
+      html.href = gtinAdresi(gtin, "");
+      html.textContent = "HTML Pasaportunu Aç";
+      const json = document.createElement("a");
+      json.className = "dugme ikincil";
+      json.href = gtinAdresi(gtin, ".jsonld");
+      json.textContent = "JSON-LD Görüntüle";
+      dugmeler.append(html, json);
+      kutu.append(govde, dugmeler);
+    }
+
+    function ozetleriYaz(kayitlar) {
+      ozetToplam.textContent = metin(kayitlar.length);
+      ozetModel.textContent = metin(new Set(kayitlar.map((urun) => metin(urun.modelAdi))).size);
+      ozetParti.textContent = metin(new Set(kayitlar.map((urun) => metin(urun.modelAdi) + "\0" + metin(urun.batchNo))).size);
+      const gecerliUrun = kayitlar.filter((urun) => kayitKontrolleri(urun).tamam).length;
+      ozetGecerli.textContent = kayitlar.length === 0 ? "—" : metin(gecerliUrun);
+      ozetGecerliNot.textContent = kayitlar.length === 0 ? "kayıt yok" : "kayıtlı ürün";
+      const aktarim = gecerlilikOzeti();
+      if (!aktarim) {
+        ozetHatali.textContent = "0";
+        ozetHataliNot.textContent = "CSV sonucu yok";
+        ozetHataliKart.classList.remove("ozet-uyari");
+      } else {
+        ozetHatali.textContent = metin(aktarim.hatali);
+        ozetHataliNot.textContent = "son CSV";
+        ozetHataliKart.classList.toggle("ozet-uyari", aktarim.hatali > 0);
+      }
+      csvOzetiniYaz();
+      kaliteyiCiz(kayitlar);
+      kaliteOzetiniYaz(kayitlar);
+      aktiviteleriCiz(kayitlar);
+      raporuCiz(kayitlar);
+    }
+
+    function csvSayisi(ad, deger) {
+      const kutu = document.createElement("p");
+      kutu.className = "csv-sayi";
+      const etiket = document.createElement("span");
+      etiket.textContent = ad;
+      const sayi = document.createElement("strong");
+      sayi.textContent = metin(deger);
+      kutu.append(etiket, sayi);
+      return kutu;
+    }
+
+    function csvOzetiniYaz() {
+      const kutu = document.getElementById("csv-ozet");
+      temizle(kutu);
+      if (!sonRapor) {
+        const bos = document.createElement("div");
+        bos.className = "csv-bos";
+        const ikon = svgEl("svg");
+        ikon.setAttribute("viewBox", "0 0 24 24");
+        ikon.setAttribute("aria-hidden", "true");
+        const cizgi = svgEl("path");
+        cizgi.setAttribute("d", "M7 3h7l5 5v13H7zM14 3v5h5");
+        cizgi.setAttribute("fill", "none");
+        cizgi.setAttribute("stroke", "currentColor");
+        cizgi.setAttribute("stroke-width", "1.6");
+        cizgi.setAttribute("stroke-linejoin", "round");
+        ikon.append(cizgi);
+        const yazi = document.createElement("p");
+        yazi.textContent = "Henüz CSV içe aktarma işlemi yapılmadı.";
+        bos.append(ikon, yazi);
+        kutu.append(bos);
+        return;
+      }
+      const dosya = document.createElement("p");
+      dosya.className = "csv-dosya";
+      dosya.textContent = metin(sonRapor.dosyaAdi) || "Dosya adı bu kayıtta yok";
+      const zaman = document.createElement("p");
+      zaman.className = "liste-not";
+      zaman.textContent = tarihMetni(sonRapor.zaman);
+      const sayilar = document.createElement("div");
+      sayilar.className = "csv-sayilar";
+      const yazilan = Number(sonRapor.basarili || 0);
+      const guncellenen = Number(sonRapor.guncellenen || 0);
+      sayilar.append(
+        csvSayisi("Toplam satır", Number(sonRapor.toplamSatir)),
+        csvSayisi("Yeni eklenen", yazilan - guncellenen),
+        csvSayisi("Güncellenen", guncellenen),
+        csvSayisi("Değişmeyen", Number(sonRapor.degisiklikYok || 0)),
+        csvSayisi("Reddedilen", Number(sonRapor.hatali || 0)));
+      kutu.append(dosya, zaman, sayilar);
+      const hatalar = Array.isArray(sonRapor.hatalar) ? sonRapor.hatalar : [];
+      if (hatalar.length === 0) return;
+      const liste = document.createElement("ul");
+      liste.className = "csv-hatalar";
+      hatalar.forEach((hata) => {
+        const li = document.createElement("li");
+        const neden = Array.isArray(hata.nedenler) ? hata.nedenler.join("; ") : "";
+        li.textContent = "Satır " + metin(hata.satir) + ": " + (neden || "Hatalı satır");
+        liste.append(li);
+      });
+      kutu.append(liste);
+    }
+
+    const DILIM_RENK = ["#5b8def", "#a78bfa", "#f07167", "#3dd68c", "#f5c16c", "#67e8f9"];
+
+    function yuzdeOran(oran) {
+      return (oran * 100).toLocaleString("tr-TR", { maximumFractionDigits: 1 });
+    }
+
+    function svgEl(ad) {
+      return document.createElementNS("http://www.w3.org/2000/svg", ad);
+    }
+
+    function modelDilimleri(kayitlar) {
+      const grup = new Map();
+      for (const urun of kayitlar) {
+        const ad = metin(urun.modelAdi) || "Adsız model";
+        grup.set(ad, (grup.get(ad) || 0) + 1);
+      }
+      return [...grup.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "tr"))
+        .map(([ad, adet], index) => ({ ad, adet, renk: DILIM_RENK[index % DILIM_RENK.length] }));
+    }
+
+    function halkaCiz(dilimler, toplam) {
+      temizle(modelHalka);
+      const iz = svgEl("circle");
+      iz.setAttribute("cx", "21");
+      iz.setAttribute("cy", "21");
+      iz.setAttribute("r", "15.5");
+      iz.setAttribute("fill", "none");
+      iz.setAttribute("stroke", "#232a3a");
+      iz.setAttribute("stroke-width", "5");
+      modelHalka.append(iz);
+      if (toplam <= 0) return;
+      const cevre = 2 * Math.PI * 15.5;
+      const bosluk = dilimler.length > 1 ? 0.012 : 0;
+      let ofset = 0;
+      for (const dilim of dilimler) {
+        const pay = dilim.adet / toplam;
+        const yay = svgEl("circle");
+        yay.setAttribute("cx", "21");
+        yay.setAttribute("cy", "21");
+        yay.setAttribute("r", "15.5");
+        yay.setAttribute("fill", "none");
+        yay.setAttribute("stroke", dilim.renk);
+        yay.setAttribute("stroke-width", "5");
+        const boy = Math.max(pay - bosluk, 0) * cevre;
+        yay.setAttribute("stroke-dasharray", boy.toFixed(2) + " " + cevre.toFixed(2));
+        yay.setAttribute("stroke-dashoffset", (-(ofset + bosluk / 2) * cevre).toFixed(2));
+        yay.setAttribute("transform", "rotate(-90 21 21)");
+        modelHalka.append(yay);
+        ofset += pay;
+      }
+    }
+
+    function dilimSatiri(dilim, toplam) {
+      const pay = toplam === 0 ? 0 : dilim.adet / toplam;
+      const satir = document.createElement("div");
+      satir.className = "dilim-satir";
+      const nokta = document.createElement("span");
+      nokta.className = "renk-nokta";
+      nokta.style.background = dilim.renk;
+      const orta = document.createElement("div");
+      const ad = document.createElement("div");
+      ad.className = "dilim-ad";
+      ad.textContent = dilim.ad;
+      const cubuk = document.createElement("div");
+      cubuk.className = "dilim-cubuk";
+      const dolu = document.createElement("span");
+      dolu.style.width = (pay * 100) + "%";
+      dolu.style.background = dilim.renk;
+      cubuk.append(dolu);
+      const yuzde = document.createElement("div");
+      yuzde.className = "dilim-pay";
+      yuzde.textContent = yuzdeOran(pay) + "% toplam";
+      orta.append(ad, cubuk, yuzde);
+      const adet = document.createElement("strong");
+      adet.className = "dilim-adet";
+      adet.textContent = metin(dilim.adet);
+      satir.append(nokta, orta, adet);
+      return satir;
+    }
+
+    function gecerlilikOzeti() {
+      if (!sonRapor || !(Number(sonRapor.toplamSatir) > 0)) return null;
+      const toplam = Number(sonRapor.toplamSatir);
+      const hatali = Number(sonRapor.hatali || 0);
+      const gecerli = toplam - hatali;
+      return { gecerli, hatali, toplam, oran: gecerli / toplam };
+    }
+
+    function kayitHucre(ad, gecerli) {
+      const td = document.createElement("td");
+      const kutu = document.createElement("span");
+      kutu.className = "kayit-ad";
+      const ikon = document.createElement("span");
+      ikon.className = "tik " + (gecerli ? "iyi" : "kotu");
+      ikon.textContent = gecerli ? "✓" : "!";
+      const yazi = document.createElement("span");
+      yazi.textContent = ad;
+      kutu.append(ikon, yazi);
+      td.append(kutu);
+      return td;
+    }
+
+    function dogrulamaDurum(etiket, gecerli) {
+      const td = document.createElement("td");
+      const span = document.createElement("span");
+      span.className = gecerli ? "durum-gecerli" : "durum-hatali";
+      span.textContent = etiket;
+      td.append(span);
+      return td;
+    }
+
+    function dogrulamaTablosu(kayitlar) {
+      temizle(dogrulama);
+      const sorgu = dogrulamaAra.value.trim().toLocaleLowerCase("tr");
+      const urunlerSorgu = !sorgu ? kayitlar : kayitlar.filter((urun) => {
+        return metin(urun.modelAdi).toLocaleLowerCase("tr").includes(sorgu)
+          || metin(urun.gtin).toLocaleLowerCase("tr").includes(sorgu)
+          || metin(urun.batchNo).toLocaleLowerCase("tr").includes(sorgu)
+          || metin(urun.uretimYeri).toLocaleLowerCase("tr").includes(sorgu);
+      });
+      for (const urun of urunlerSorgu) {
+        const kontrol = kayitKontrolleri(urun);
+        const etiket = !kontrol.gtinTamam
+          ? "GTIN biçimi veya kontrol basamağı geçersiz"
+          : (!kontrol.elyafTamam ? "Elyaf toplamı %100 değil" : "GTIN ve elyaf geçerli");
+        const satir = document.createElement("tr");
+        const elyaf = document.createElement("td");
+        elyaf.append(elyafKutu(urun.pamuk, urun.elastan));
+        satir.append(
+          kayitHucre(metin(urun.modelAdi), kontrol.tamam),
+          hucre(urun.gtin, "gtin"),
+          elyaf,
+          dogrulamaDurum(etiket, kontrol.tamam),
+          hucre(metin(urun.uretimYeri) + " · " + metin(urun.batchNo) + " · v" + metin(urun.version)));
+        satir.addEventListener("click", () => { location.hash = "#/urun/" + metin(urun.gtin); });
+        dogrulama.append(satir);
+      }
+      const hatalarListe = sonRapor && Array.isArray(sonRapor.hatalar) ? sonRapor.hatalar : [];
+      for (const hata of hatalarListe) {
+        const neden = Array.isArray(hata.nedenler) ? hata.nedenler.join("; ") : "";
+        const satirMetni = "satır " + metin(hata.satir);
+        if (sorgu && !satirMetni.includes(sorgu) && !neden.toLocaleLowerCase("tr").includes(sorgu)) continue;
+        const satir = document.createElement("tr");
+        satir.append(
+          kayitHucre("Satır " + metin(hata.satir), false),
+          hucre("—", "gtin"),
+          hucre("—"),
+          dogrulamaDurum(neden || "Hatalı satır", false),
+          hucre("CSV"));
+        dogrulama.append(satir);
+      }
+      if (!dogrulama.firstChild) {
+        const bos = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 5;
+        td.textContent = kayitlar.length === 0 ? "Henüz ürün yok" : "Aramanızla eşleşen kayıt yok.";
+        bos.append(td);
+        dogrulama.append(bos);
+      }
+    }
+
+    function kaliteyiCiz(kayitlar) {
+      if (dogrulama) dogrulamaTablosu(kayitlar);
+      if (!modelHalka) return;
+      const dilimler = modelDilimleri(kayitlar);
+      const modelToplam = dilimler.reduce((toplam, dilim) => toplam + dilim.adet, 0);
+      halkaCiz(dilimler, modelToplam);
+      temizle(modelListe);
+      if (dilimler.length === 0) {
+        const bos = document.createElement("p");
+        bos.className = "dilim-pay";
+        bos.textContent = "Henüz kayıt yok.";
+        modelListe.append(bos);
+      } else {
+        dilimler.forEach((dilim) => modelListe.append(dilimSatiri(dilim, modelToplam)));
+      }
+      const ozet = gecerlilikOzeti();
+      temizle(gecerlilikOran);
+      if (!ozet) {
+        gecerlilikOran.textContent = "—";
+        gecerlilikDolu.style.width = "0%";
+        gecerlilikCubuk.setAttribute("aria-valuenow", "0");
+        gecerlilikNot.textContent = "Henüz bu tarayıcıda CSV içe aktarma sonucu yok. Kayıtlı ürün sayısı bu oranı vermez.";
+        gecerliEtiket.textContent = "kayıt";
+        gecerliSayi.textContent = "—";
+        hataliSayi.textContent = "—";
+        olcuKalite.textContent = "—";
+        olcuKaliteNot.textContent = "içe aktarma yok";
+        olcuKaliteNot.className = "notr";
+        olcuHata.textContent = "—";
+        olcuHataNot.textContent = "içe aktarma sonucu yok";
+        olcuHataNot.className = "notr";
+      } else {
+        gecerlilikOran.append(document.createTextNode("%" + yuzdeOran(ozet.oran)));
+        const kucuk = document.createElement("small");
+        kucuk.textContent = "geçerli";
+        gecerlilikOran.append(kucuk);
+        const yuzdeCubuk = Math.max(0, Math.min(100, ozet.oran * 100));
+        gecerlilikDolu.style.width = yuzdeCubuk + "%";
+        gecerlilikCubuk.setAttribute("aria-valuenow", String(Math.round(yuzdeCubuk)));
+        gecerlilikNot.textContent = ozet.gecerli + " geçerli kayıt · " + ozet.hatali + " hatalı kayıt";
+        gecerliEtiket.textContent = "kayıt";
+        gecerliSayi.textContent = metin(ozet.gecerli);
+        hataliSayi.textContent = metin(ozet.hatali);
+        olcuKalite.textContent = "%" + yuzdeOran(ozet.oran);
+        olcuKaliteNot.textContent = "son içe aktarma";
+        olcuKaliteNot.className = ozet.hatali === 0 ? "iyi" : "notr";
+        olcuHata.textContent = metin(ozet.hatali);
+        olcuHataNot.textContent = ozet.hatali === 0 ? "hata yok" : "satır reddedildi";
+        olcuHataNot.className = ozet.hatali > 0 ? "kotu" : "iyi";
+      }
+      olcuUrun.textContent = metin(kayitlar.length);
+      olcuModel.textContent = metin(dilimler.length);
+    }
+
+    function aktiviteListesi(kayitlar) {
+      const listeAktivite = [];
+      for (const urun of kayitlar) {
+        const parca = tarihParcalari(urun.updatedAt);
+        listeAktivite.push({
+          an: parca ? parca.an : 0,
+          iso: metin(urun.updatedAt),
+          metin: Number(urun.version) > 1
+            ? "Ürün verisi güncellendi: " + metin(urun.modelAdi)
+            : "Yeni ürün eklendi: " + metin(urun.modelAdi)
+        });
+      }
+      if (sonRapor && sonRapor.zaman) {
+        const parca = tarihParcalari(sonRapor.zaman);
+        listeAktivite.push({
+          an: parca ? parca.an : 0,
+          iso: sonRapor.zaman,
+          metin: "CSV yüklendi: " + sonRapor.toplamSatir + " satır, " + sonRapor.hatali + " hatalı"
+        });
+      }
+      listeAktivite.sort((a, b) => b.an - a.an);
+      return listeAktivite;
+    }
+    function aktiviteOgesi(kayit) {
+      const li = document.createElement("li");
+      const zaman = document.createElement("time");
+      zaman.dateTime = kayit.iso;
+      zaman.textContent = tarihMetni(kayit.iso);
+      const p = document.createElement("p");
+      p.textContent = kayit.metin;
+      li.append(zaman, p);
+      return li;
+    }
+    function kaliteCubugunuYaz(oran) {
+      const cubuk = document.getElementById("kalite-cubuk");
+      const dolu = document.getElementById("kalite-dolu");
+      const yuzde = Math.max(0, Math.min(100, oran * 100));
+      dolu.style.width = yuzde + "%";
+      cubuk.setAttribute("aria-valuenow", String(Math.round(yuzde)));
+    }
+    function kaliteOzetiniYaz(kayitlar) {
+      const skor = document.getElementById("kalite-skor");
+      const not = document.getElementById("kalite-not");
+      const liste = document.getElementById("kalite-liste");
+      temizle(liste);
+      if (kayitlar.length === 0) {
+        skor.textContent = "—";
+        not.textContent = "Kayıtlı ürün yok. Bu oran CSV kabul oranından gelmez.";
+        kaliteCubugunuYaz(0);
+        return;
+      }
+      const kontroller = kayitlar.map(kayitKontrolleri);
+      const gecerli = kontroller.filter((kontrol) => kontrol.tamam).length;
+      const oran = gecerli / kayitlar.length;
+      skor.textContent = "%" + yuzdeOran(oran);
+      kaliteCubugunuYaz(oran);
+      not.textContent = gecerli + " / " + kayitlar.length + " kayıtlı ürün geçti. CSV satır oranı bu sayıya karışmaz.";
+      const madde = (ad, adet) => {
+        const li = document.createElement("li");
+        const yazi = document.createElement("span");
+        yazi.textContent = ad;
+        const sonuc = document.createElement("strong");
+        sonuc.textContent = adet + "/" + kayitlar.length;
+        li.append(yazi, sonuc);
+        liste.append(li);
+      };
+      madde("GTIN kontrol basamağı", kontroller.filter((kontrol) => kontrol.gtinTamam).length);
+      madde("Elyaf toplamı %100", kontroller.filter((kontrol) => kontrol.elyafTamam).length);
+      madde("Model, parti ve üretim yeri", kontroller.filter((kontrol) => kontrol.alanTamam).length);
+    }
+
+    function aktiviteleriCiz(kayitlar) {
+      const hepsi = aktiviteListesi(kayitlar);
+      temizle(aktiviteler);
+      temizle(aktivitelerTum);
+      if (hepsi.length === 0) {
+        const bos = document.createElement("li");
+        bos.textContent = "Henüz hareket yok.";
+        aktiviteler.append(bos);
+        aktivitelerTum.append(bos.cloneNode(true));
+      } else {
+        hepsi.slice(0, 4).forEach((kayit) => aktiviteler.append(aktiviteOgesi(kayit)));
+        hepsi.forEach((kayit) => aktivitelerTum.append(aktiviteOgesi(kayit)));
+      }
+      bildirimleriCiz(kayitlar);
+    }
+
+    function bildirimListesi(kayitlar) {
+      const liste = [];
+      for (const rapor of gecmisiOku()) {
+        const parca = tarihParcalari(rapor.zaman);
+        const gecerli = Number(rapor.toplamSatir) - Number(rapor.hatali || 0);
+        const hatali = Number(rapor.hatali || 0);
+        liste.push({
+          id: "csv:" + metin(rapor.zaman),
+          an: parca ? parca.an : 0,
+          iso: metin(rapor.zaman),
+          baslik: "CSV içe aktarma tamamlandı",
+          metin: gecerli + " satır doğrulamayı geçti, " + hatali + " satır reddedildi.",
+          href: ""
+        });
+        if (hatali > 0) {
+          liste.push({
+            id: "csv-hata:" + metin(rapor.zaman),
+            an: parca ? parca.an : 0,
+            iso: metin(rapor.zaman),
+            baslik: "İçe aktarmada hatalı satırlar var",
+            metin: "Hata ayrıntılarını raporlar bölümünde inceleyin.",
+            href: "#/raporlar"
+          });
+        }
+      }
+      for (const urun of kayitlar) {
+        const parca = tarihParcalari(urun.updatedAt);
+        const guncel = Number(urun.version) > 1;
+        liste.push({
+          id: "urun:" + metin(urun.gtin) + ":" + metin(urun.updatedAt),
+          an: parca ? parca.an : 0,
+          iso: metin(urun.updatedAt),
+          baslik: guncel ? "Ürün verisi güncellendi" : "Yeni ürün eklendi",
+          metin: metin(urun.modelAdi),
+          href: "#/urun/" + metin(urun.gtin)
+        });
+      }
+      liste.sort((a, b) => b.an - a.an);
+      return liste;
+    }
+
+    function okunanBildirimler() {
+      try {
+        const veri = JSON.parse(localStorage.getItem(BILDIRIM_DEPO) || "null");
+        if (!veri || !Array.isArray(veri.okunan)) return new Set();
+        return new Set(veri.okunan.filter((id) => typeof id === "string" && id));
+      } catch { return new Set(); }
+    }
+    function bildirimiOkunduYap(id) {
+      if (!id) return;
+      const okunan = okunanBildirimler();
+      if (okunan.has(id)) return;
+      okunan.add(id);
+      try { localStorage.setItem(BILDIRIM_DEPO, JSON.stringify({ okunan: [...okunan].slice(-100) })); } catch { /* rozet bu oturumda yine düşer */ }
+    }
+    function bildirimSayisiniYaz(okunmamis) {
+      const sayi = zilListe.querySelector(".bildirim-sayi");
+      if (sayi) sayi.textContent = okunmamis === 0 ? "Tümü okundu" : okunmamis + " okunmamış";
+      zilSayi.hidden = okunmamis === 0;
+      if (okunmamis > 0) zilSayi.textContent = okunmamis > 99 ? "99+" : metin(okunmamis);
+      zil.setAttribute("aria-label", okunmamis === 0 ? "Bildirimler" : "Bildirimler, " + okunmamis + " okunmamış");
+    }
+    function bildirimOgesi(kayit, okundu) {
+      const li = document.createElement("li");
+      li.className = okundu ? "bildirim okundu" : "bildirim";
+      const baslik = document.createElement("strong");
+      baslik.textContent = kayit.baslik;
+      const aciklama = document.createElement("p");
+      aciklama.textContent = kayit.metin;
+      const zaman = document.createElement("time");
+      zaman.dateTime = kayit.iso;
+      zaman.textContent = tarihMetni(kayit.iso);
+      li.append(baslik, aciklama, zaman);
+      const oku = () => {
+        if (li.classList.contains("okundu")) return;
+        bildirimiOkunduYap(kayit.id);
+        li.classList.add("okundu");
+        const kalan = okunanBildirimler();
+        const okunmamis = bildirimListesi(tumKayitlar).filter((oge) => !kalan.has(oge.id)).length;
+        bildirimSayisiniYaz(okunmamis);
+      };
+      if (kayit.href) {
+        const bag = document.createElement("a");
+        bag.href = kayit.href;
+        bag.textContent = kayit.href.indexOf("#/raporlar") === 0 ? "Raporlarda aç" : "Ürünü aç";
+        bag.addEventListener("click", oku);
+        li.append(bag);
+      } else {
+        li.classList.add("tiklanir");
+        li.addEventListener("click", oku);
+      }
+      return li;
+    }
+
+    function bildirimleriCiz(kayitlar) {
+      const hepsi = bildirimListesi(kayitlar);
+      const okunan = okunanBildirimler();
+      const okunmamis = hepsi.filter((kayit) => !okunan.has(kayit.id)).length;
+      const acik = !zilListe.hidden;
+      temizle(zilListe);
+      const baslik = document.createElement("h2");
+      baslik.textContent = "Bildirimler";
+      const alt = document.createElement("p");
+      alt.className = "alt-baslik";
+      alt.textContent = "Son işlemler";
+      zilListe.append(baslik, alt);
+      if (hepsi.length === 0) {
+        const bos = document.createElement("p");
+        bos.className = "bildirim-bos";
+        bos.textContent = "Henüz bildiriminiz yok";
+        zilListe.append(bos);
+        zilSayi.hidden = true;
+        zil.setAttribute("aria-label", "Bildirimler");
+      } else {
+        hepsi.slice(0, 8).forEach((kayit) => zilListe.append(bildirimOgesi(kayit, okunan.has(kayit.id))));
+        const sayi = document.createElement("p");
+        sayi.className = "bildirim-sayi";
+        zilListe.append(sayi);
+        bildirimSayisiniYaz(okunmamis);
+      }
+      zilListe.hidden = !acik;
+    }
+
+    function sayimListesi(baslik, ciftler) {
+      const kutu = document.createElement("div");
+      const ad = document.createElement("h3");
+      ad.textContent = baslik;
+      const liste = document.createElement("ul");
+      liste.className = "sayim";
+      if (ciftler.length === 0) {
+        const li = document.createElement("li");
+        li.textContent = "Kayıt yok";
+        liste.append(li);
+      } else {
+        ciftler.forEach(([adSatir, adet]) => {
+          const li = document.createElement("li");
+          const sol = document.createElement("span");
+          sol.textContent = adSatir;
+          const sag = document.createElement("strong");
+          sag.textContent = metin(adet);
+          li.append(sol, sag);
+          liste.append(li);
+        });
+      }
+      kutu.append(ad, liste);
+      return kutu;
+    }
+
+    function sayim(kayitlar, alan) {
+      const grup = new Map();
+      for (const urun of kayitlar) {
+        const ad = metin(urun[alan]) || "—";
+        grup.set(ad, (grup.get(ad) || 0) + 1);
+      }
+      return [...grup.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "tr"));
+    }
+
+    function hataSinifi(neden) {
+      const yazi = metin(neden).toLowerCase();
+      if (yazi.includes("gtin")) return "Geçersiz GTIN";
+      if (yazi.includes("pamuk") || yazi.includes("elastan") || yazi.includes("oran")) return "Elyaf toplamı veya oranı";
+      if (yazi.includes("boş")) return "Eksik alan";
+      return "Diğer";
+    }
+
+    function raporuCiz(kayitlar) {
+      const liste = kayitlar || [];
+      raporUrun.textContent = metin(liste.length);
+      raporModel.textContent = metin(new Set(liste.map((urun) => metin(urun.modelAdi))).size);
+      const ozet = gecerlilikOzeti();
+      if (!ozet) {
+        raporOran.textContent = "—";
+        raporOranNot.textContent = "İçe aktarma yok";
+        raporRed.textContent = "—";
+        raporRedNot.textContent = "son içe aktarma yok";
+      } else {
+        raporOran.textContent = "%" + yuzdeOran(ozet.oran);
+        raporOranNot.textContent = ozet.gecerli + " geçerli / " + ozet.toplam + " satır";
+        raporRed.textContent = metin(ozet.hatali);
+        raporRedNot.textContent = "son içe aktarma";
+      }
+      temizle(aktarimGecmis);
+      const gecmis = gecmisiOku();
+      if (gecmis.length === 0) {
+        const bos = document.createElement("p");
+        bos.className = "liste-not";
+        bos.textContent = "Henüz bu tarayıcıda CSV içe aktarma yok.";
+        aktarimGecmis.append(bos);
+      } else {
+        gecmis.forEach((rapor) => aktarimGecmis.append(aktarimKarti(rapor)));
+      }
+      temizle(dogrulamaRapor);
+      if (gecmis.length === 0) {
+        const bos = document.createElement("p");
+        bos.className = "liste-not";
+        bos.textContent = "Doğrulama sonucu yok. Önce bir CSV içe aktarın.";
+        dogrulamaRapor.append(bos);
+      } else {
+        gecmis.forEach((rapor) => dogrulamaRapor.append(dogrulamaKarti(rapor)));
+      }
+      temizle(dagilimRapor);
+      dagilimRapor.append(
+        sayimListesi("Şehirler", sayim(liste, "uretimYeri")),
+        sayimListesi("Modeller", sayim(liste, "modelAdi")),
+        sayimListesi("Partiler", sayim(liste, "batchNo")));
+      temizle(pasaportRapor);
+      pasaportRapor.append(pasaportTablosu(liste));
+    }
+
+    function aktarimKarti(rapor) {
+      const kart = document.createElement("article");
+      kart.className = "bildirim";
+      const baslik = document.createElement("strong");
+      baslik.textContent = metin(rapor.dosyaAdi) || "Dosya adı bu kayıtta yok";
+      const gecerli = Number(rapor.toplamSatir) - Number(rapor.hatali || 0);
+      const ozet = document.createElement("p");
+      ozet.textContent = tarihMetni(rapor.zaman) + " · " + rapor.toplamSatir + " satır · " + gecerli + " doğrulamayı geçti · " + metin(rapor.hatali) + " reddedildi · " + metin(rapor.basarili) + " yazıldı · " + metin(rapor.degisiklikYok) + " aynı kaldı";
+      kart.append(baslik, ozet);
+      const listeHata = Array.isArray(rapor.hatalar) ? rapor.hatalar : [];
+      listeHata.forEach((hata) => kart.append(hataKarti(hata)));
+      return kart;
+    }
+
+    function dogrulamaKarti(rapor) {
+      const kart = document.createElement("article");
+      kart.className = "bildirim";
+      const baslik = document.createElement("strong");
+      baslik.textContent = (metin(rapor.dosyaAdi) || "Adsız dosya") + " · " + tarihMetni(rapor.zaman);
+      kart.append(baslik);
+      const grup = new Map();
+      const listeHata = Array.isArray(rapor.hatalar) ? rapor.hatalar : [];
+      listeHata.forEach((hata) => {
+        const nedenler = Array.isArray(hata.nedenler) && hata.nedenler.length ? hata.nedenler : ["Hata nedeni yok."];
+        nedenler.forEach((neden) => {
+          const sinif = hataSinifi(neden);
+          if (!grup.has(sinif)) grup.set(sinif, []);
+          grup.get(sinif).push("Satır " + metin(hata.satir) + ": " + metin(neden));
+        });
+      });
+      if (grup.size === 0) {
+        const bos = document.createElement("p");
+        bos.textContent = "Bu dosyada reddedilen satır yok.";
+        kart.append(bos);
+        return kart;
+      }
+      grup.forEach((satirlar, sinif) => {
+        const ad = document.createElement("p");
+        const kalin = document.createElement("strong");
+        kalin.textContent = sinif;
+        ad.append(kalin);
+        kart.append(ad);
+        satirlar.forEach((satir) => {
+          const p = document.createElement("p");
+          p.textContent = satir;
+          kart.append(p);
+        });
+      });
+      return kart;
+    }
+
+    function pasaportTablosu(kayitlar) {
+      if (kayitlar.length === 0) {
+        const bos = document.createElement("p");
+        bos.className = "liste-not";
+        bos.textContent = "Henüz ürün yok";
+        return bos;
+      }
+      const sarmal = document.createElement("div");
+      sarmal.className = "tablo-sarmal";
+      const tablo = document.createElement("table");
+      const baslik = document.createElement("thead");
+      const satir = document.createElement("tr");
+      ["GTIN", "Model", "Sürüm", "Güncelleme", "HTML", "JSON-LD", "QR"].forEach((ad) => {
+        const hucreBaslik = document.createElement("th");
+        hucreBaslik.scope = "col";
+        hucreBaslik.textContent = ad;
+        satir.append(hucreBaslik);
+      });
+      baslik.append(satir);
+      const govde = document.createElement("tbody");
+      kayitlar.forEach((urun) => {
+        const gtin = metin(urun.gtin);
+        const tr = document.createElement("tr");
+        tr.append(hucre(gtin, "gtin"), hucre(urun.modelAdi), hucre("v" + metin(urun.version)), hucre(tarihMetni(urun.updatedAt)));
+        if (gecerliGtin(gtin)) {
+          tr.append(bagHucre("HTML", gtinAdresi(gtin, "")), bagHucre("JSON-LD", gtinAdresi(gtin, ".jsonld")), bagHucre("QR", gtinAdresi(gtin, ".png")));
+        } else {
+          tr.append(hucre("—"), hucre("—"), hucre("—"));
+        }
+        govde.append(tr);
+      });
+      tablo.append(baslik, govde);
+      sarmal.append(tablo);
+      return sarmal;
+    }
+
+    function bagHucre(etiket, adres) {
+      const td = document.createElement("td");
+      const a = document.createElement("a");
+      a.href = adres;
+      a.textContent = etiket;
+      td.append(a);
+      return td;
+    }
+    function hataKarti(hata) {
+      const kart = document.createElement("article");
+      kart.className = "hata-karti";
+      const baslik = document.createElement("strong");
+      baslik.textContent = "Satır " + metin(hata.satir);
+      kart.append(baslik);
+      const nedenler = Array.isArray(hata.nedenler) ? hata.nedenler : [];
+      if (nedenler.length === 0) {
+        const bos = document.createElement("p");
+        bos.textContent = "Hata nedeni yok.";
+        kart.append(bos);
+        return kart;
+      }
+      nedenler.forEach((neden) => {
+        const satir = document.createElement("p");
+        satir.textContent = metin(neden);
+        kart.append(satir);
+      });
+      return kart;
+    }
+
+    const EN_MIN = 25.7, EN_MAX = 45.0, BOY_MIN = 35.7, BOY_MAX = 42.3;
+    const SEHIR = {
+      adana: [35.3213, 37.0], adiyaman: [38.2786, 37.7648], afyonkarahisar: [30.5387, 38.7507], agri: [43.0503, 39.7191],
+      amasya: [35.833, 40.6499], ankara: [32.8597, 39.9334], antalya: [30.7133, 36.8969], artvin: [41.8183, 41.1828],
+      aydin: [27.8456, 37.856], balikesir: [27.8826, 39.6484], bilecik: [29.9793, 40.1451], bingol: [40.501, 38.8855],
+      bitlis: [42.109, 38.4006], bolu: [31.6061, 40.736], burdur: [30.2906, 37.7203], bursa: [29.061, 40.1885],
+      canakkale: [26.4142, 40.1553], cankiri: [33.6134, 40.6013], corum: [34.9556, 40.5506], denizli: [29.0875, 37.7765],
+      diyarbakir: [40.2306, 37.9144], edirne: [26.5557, 41.6771], elazig: [39.2264, 38.681], erzincan: [39.4902, 39.75],
+      erzurum: [41.2769, 39.9055], eskisehir: [30.5256, 39.7767], gaziantep: [37.3825, 37.0662], giresun: [38.3895, 40.9128],
+      gumushane: [39.4769, 40.4603], hakkari: [43.7408, 37.5744], hatay: [36.1663, 36.4018], isparta: [30.5566, 37.7648],
+      mersin: [34.6415, 36.8121], istanbul: [28.9784, 41.0082], izmir: [27.1428, 38.4237], kars: [43.0975, 40.6013],
+      kastamonu: [33.7827, 41.3887], kayseri: [35.4787, 38.7312], kirklareli: [27.2256, 41.7351], kirsehir: [34.1639, 39.1425],
+      kocaeli: [29.9167, 40.8533], konya: [32.4932, 37.8746], kutahya: [29.9833, 39.4167], malatya: [38.3552, 38.3552],
+      manisa: [27.426, 38.6191], kahramanmaras: [36.9376, 37.5858], mardin: [40.7245, 37.3212], mugla: [28.3665, 37.2153],
+      mus: [41.496, 38.7432], nevsehir: [34.7239, 38.6244], nigde: [34.6795, 37.9667], ordu: [37.8764, 40.9839],
+      rize: [40.5234, 41.0201], sakarya: [30.4033, 40.7731], samsun: [36.33, 41.2867], siirt: [41.9403, 37.9333],
+      sinop: [35.153, 42.0267], sivas: [37.015, 39.7477], tekirdag: [27.5117, 40.978], tokat: [36.5544, 40.3167],
+      trabzon: [39.7168, 41.0027], tunceli: [39.5471, 39.1079], sanliurfa: [38.7955, 37.1591], usak: [29.4058, 38.6823],
+      van: [43.3831, 38.4891], yozgat: [34.8044, 39.8181], zonguldak: [31.7931, 41.4564], aksaray: [34.0254, 38.3687],
+      bayburt: [40.2249, 40.2552], karaman: [33.2287, 37.1759], kirikkale: [33.5153, 39.8468], batman: [41.1351, 37.8812],
+      sirnak: [42.4611, 37.5164], bartin: [32.3375, 41.6344], ardahan: [42.7022, 41.1105], igdir: [44.045, 39.9237],
+      yalova: [29.2769, 40.65], karabuk: [32.6204, 41.2061], kilis: [37.115, 36.7184], osmaniye: [36.2478, 37.0742],
+      duzce: [31.1565, 40.8438]
+    };
+    const SEHIR_TAKMA = {
+      afyon: "afyonkarahisar", adapazari: "sakarya", icel: "mersin", urfa: "sanliurfa",
+      antep: "gaziantep", maras: "kahramanmaras", antakya: "hatay"
+    };
+    const TURKIYE = [
+      [26.10, 40.40], [26.05, 40.70], [26.15, 41.20], [26.05, 41.58], [26.55, 41.74], [27.30, 41.76], [27.95, 41.58], [28.55, 41.28], [29.05, 41.28], [29.40, 41.20],
+      [30.00, 41.18], [30.70, 41.35], [31.40, 41.58], [32.10, 41.70], [32.55, 41.75], [33.30, 41.95], [34.20, 41.85], [35.15, 42.12], [36.10, 41.45], [37.00, 41.35],
+      [37.90, 41.25], [38.80, 41.20], [39.70, 41.15], [40.55, 41.20], [41.35, 41.45], [42.10, 41.55], [42.80, 41.52], [43.40, 41.20], [43.70, 40.70], [44.20, 40.15],
+      [44.85, 39.85], [44.70, 39.20], [44.55, 38.40], [44.45, 37.55], [44.05, 37.25], [43.20, 37.15], [42.20, 37.15], [41.20, 37.05], [40.20, 36.95], [39.20, 36.75],
+      [38.20, 36.70], [37.20, 36.65], [36.55, 36.20], [36.20, 35.95], [35.80, 36.35], [35.10, 36.55], [34.30, 36.20], [33.30, 36.10], [32.30, 36.05], [31.20, 36.20],
+      [30.40, 36.18], [29.30, 36.25], [28.30, 36.45], [27.40, 36.70], [26.85, 37.20], [26.40, 37.70], [26.25, 38.25], [26.20, 38.70], [26.30, 39.20], [26.15, 39.70], [26.20, 40.15], [26.10, 40.40]
+    ];
+    function projeksiyon(en, boy) {
+      const x = (en - EN_MIN) / (EN_MAX - EN_MIN);
+      const y = (BOY_MAX - boy) / (BOY_MAX - BOY_MIN);
+      return { x: 8 + x * 84, y: 5 + y * 52 };
+    }
+    function sehirAnahtar(ad) {
+      const kat = { ç: "c", ğ: "g", ı: "i", ö: "o", ş: "s", ü: "u", â: "a", î: "i", û: "u" };
+      const s = ad.trim().replace(/\s+/g, " ").replace(/İ/g, "i").replace(/I/g, "ı").toLocaleLowerCase("tr");
+      let katli = "";
+      for (const ch of s) katli += kat[ch] || ch;
+      return SEHIR_TAKMA[katli] || katli;
+    }
+    function haritayiHazirla() {
+      if (kara.getAttribute("d")) return;
+      const d = TURKIYE.map((nokta, index) => {
+        const yer = projeksiyon(nokta[0], nokta[1]);
+        return (index === 0 ? "M" : "L") + yer.x.toFixed(2) + " " + yer.y.toFixed(2);
+      }).join(" ") + " Z";
+      kara.setAttribute("d", d);
+    }
+    function pinSvg() {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "0 0 24 32");
+      svg.setAttribute("aria-hidden", "true");
+      const govde = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      govde.setAttribute("d", "M12 1.5a8.5 8.5 0 0 1 8.5 8.5c0 6.4-8.5 14.2-8.5 14.2S3.5 16.4 3.5 10A8.5 8.5 0 0 1 12 1.5z");
+      govde.setAttribute("fill", "currentColor");
+      const orta = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      orta.setAttribute("cx", "12");
+      orta.setAttribute("cy", "10");
+      orta.setAttribute("r", "3");
+      orta.setAttribute("fill", "#0c1f1c");
+      svg.append(govde, orta);
+      return svg;
+    }
+    function yolculuguCiz(kayitlar) {
+      haritayiHazirla();
+      temizle(pinler);
+      const gruplar = new Map();
+      for (const urun of kayitlar) {
+        const ad = metin(urun.uretimYeri).trim().replace(/\s+/g, " ");
+        if (!ad) continue;
+        const anahtar = sehirAnahtar(ad);
+        const kayit = gruplar.get(anahtar) || { ad, adet: 0 };
+        kayit.adet += 1;
+        gruplar.set(anahtar, kayit);
+      }
+      const sorgu = arama.value.trim().toLocaleLowerCase("tr");
+      const disarida = [];
+      for (const [anahtar, kayit] of gruplar) {
+        const koordinat = SEHIR[anahtar];
+        if (!koordinat) { disarida.push(kayit.ad); continue; }
+        const yer = projeksiyon(koordinat[0], koordinat[1]);
+        const secili = sorgu && kayit.ad.toLocaleLowerCase("tr").includes(sorgu);
+        const dugme = document.createElement("button");
+        dugme.type = "button";
+        dugme.className = "pin" + (yer.x > 62 ? " pin-sol" : "") + (secili ? " secili" : "");
+        dugme.style.left = yer.x.toFixed(2) + "%";
+        dugme.style.top = (yer.y / 62 * 100).toFixed(2) + "%";
+        dugme.dataset.sehir = kayit.ad;
+        dugme.setAttribute("aria-label", kayit.ad + ", " + kayit.adet + " ürün");
+        dugme.setAttribute("aria-pressed", secili ? "true" : "false");
+        const yazi = document.createElement("span");
+        yazi.textContent = kayit.ad;
+        const adet = document.createElement("small");
+        adet.textContent = kayit.adet + " ürün";
+        const etiket = document.createElement("span");
+        etiket.className = "etiket";
+        etiket.append(yazi, adet);
+        dugme.append(pinSvg(), etiket);
+        pinler.append(dugme);
+      }
+      haritaDisi.hidden = disarida.length === 0;
+      haritaDisi.textContent = disarida.length === 0 ? "" : "Haritada yeri olmayan kayıtlar: " + disarida.join(", ");
+      sehirCubuklariniCiz([...gruplar.values()]);
+    }
+
+    function sehirCubuklariniCiz(kayitlar) {
+      const liste = document.getElementById("sehir-cubuk");
+      const ozet = document.getElementById("sehir-ozet");
+      temizle(liste);
+      const sirali = kayitlar.slice().sort((a, b) => b.adet - a.adet || a.ad.localeCompare(b.ad, "tr"));
+      if (sirali.length === 0) {
+        const bos = document.createElement("p");
+        bos.className = "sehir-ozet";
+        bos.textContent = "Kayıtlı üretim yeri yok.";
+        liste.append(bos);
+        ozet.textContent = "";
+        return;
+      }
+      const enBuyuk = sirali[0].adet;
+      const toplam = sirali.reduce((sayi, kayit) => sayi + kayit.adet, 0);
+      sirali.forEach((kayit, index) => {
+        const dugme = document.createElement("button");
+        dugme.type = "button";
+        dugme.className = "sehir-satir";
+        dugme.setAttribute("aria-label", kayit.ad + ", " + kayit.adet + " ürün");
+        const ust = document.createElement("span");
+        ust.className = "sehir-ust";
+        const ad = document.createElement("span");
+        ad.textContent = kayit.ad;
+        const adet = document.createElement("strong");
+        adet.textContent = kayit.adet + " ürün";
+        ust.append(ad, adet);
+        const iz = document.createElement("span");
+        iz.className = "sehir-iz";
+        const dolu = document.createElement("span");
+        dolu.className = "sehir-dolu" + (index === 0 ? "" : " ikincil");
+        dolu.style.width = Math.round(kayit.adet / enBuyuk * 100) + "%";
+        iz.append(dolu);
+        dugme.append(ust, iz);
+        dugme.addEventListener("click", () => sehirSuz(kayit.ad));
+        liste.append(dugme);
+      });
+      ozet.textContent = "Toplam " + toplam + " ürün · " + sirali.length + " üretim şehri";
+    }
+
+    function sehirSuz(ad) {
+      const anahtar = ad.toLocaleLowerCase("tr");
+      arama.value = arama.value.trim().toLocaleLowerCase("tr") === anahtar ? "" : ad;
+      sayfa = 1;
+      cizListe(tumKayitlar);
+      if (location.hash !== "#/urunler") location.hash = "#/urunler";
+    }
+
+    function sistemYaz(tamam) {
+      sistem.classList.toggle("hata", !tamam);
+      sistem.querySelector("span").textContent = tamam ? "Sistem çalışıyor" : "Sunucuya ulaşılamadı";
+    }
+
+    async function listeyiYukle() {
+      const yonetimDurum = document.getElementById("yonetim-durum");
+      yonetimDurum.hidden = false;
+      yonetimDurum.className = "durum durum-yukleniyor";
+      yonetimDurum.textContent = "Ürünler yükleniyor...";
+      try {
+        const yanit = await fetch("/api/products");
+        if (!yanit.ok) throw new Error("yanit");
+        const veri = await yanit.json();
+        tumKayitlar = Array.isArray(veri) ? veri : [];
+        sistemYaz(true);
+        aktarimDamgasiniIsle(tumKayitlar);
+        aktarimEkraniniYaz();
+        ozetleriYaz(tumKayitlar);
+        cizListe(tumKayitlar);
+      } catch {
+        tumKayitlar = [];
+        sistemYaz(false);
+        yonetimDurum.hidden = false;
+        yonetimDurum.className = "durum durum-hata";
+        yonetimDurum.textContent = "Sunucuya ulaşılamadı.";
+        const islem = document.getElementById("panel-islemler");
+        temizle(islem);
+        const bos = document.createElement("p");
+        bos.className = "liste-not";
+        bos.textContent = "Sunucuya ulaşılamadı.";
+        islem.append(bos);
+      }
+      if (bolum().ad === "detay") detayiCiz();
+    }
+
+    function kucukIkon(yol) {
+      const svg = svgEl("svg");
+      svg.setAttribute("viewBox", "0 0 24 24");
+      svg.setAttribute("width", "14");
+      svg.setAttribute("height", "14");
+      svg.setAttribute("aria-hidden", "true");
+      const cizgi = svgEl("path");
+      cizgi.setAttribute("d", yol);
+      cizgi.setAttribute("fill", "none");
+      cizgi.setAttribute("stroke", "currentColor");
+      cizgi.setAttribute("stroke-width", "1.8");
+      cizgi.setAttribute("stroke-linecap", "round");
+      cizgi.setAttribute("stroke-linejoin", "round");
+      svg.append(cizgi);
+      return svg;
+    }
+
+    function detayRozet(ikon, yazi) {
+      const span = document.createElement("span");
+      span.className = "detay-rozet";
+      span.append(ikon, document.createTextNode(yazi));
+      return span;
+    }
+
+    function detayBag(ikon, etiket, adres) {
+      const a = document.createElement("a");
+      a.href = adres;
+      a.append(ikon, document.createTextNode(etiket));
+      return a;
+    }
+
+    function elyafSatiri(ad, deger, renk) {
+      const satir = document.createElement("p");
+      satir.className = "elyaf-satir";
+      const adKutu = document.createElement("span");
+      const nokta = document.createElement("i");
+      nokta.style.background = renk;
+      adKutu.append(nokta, document.createTextNode(ad));
+      const oran = document.createElement("strong");
+      oran.textContent = "%" + yuzde(deger);
+      satir.append(adKutu, oran);
+      return satir;
+    }
+
+    function detayElyaf(pamuk, elastan) {
+      const cubuk = document.getElementById("detay-cubuk");
+      const not = document.getElementById("detay-elyaf-not");
+      temizle(cubuk);
+      temizle(not);
+      const p = Number(pamuk);
+      const e = Number(elastan);
+      const pSayi = Number.isFinite(p) ? Math.max(p, 0) : 0;
+      const eSayi = Number.isFinite(e) ? Math.max(e, 0) : 0;
+      const toplam = pSayi + eSayi || 1;
+      const pamukDilim = document.createElement("span");
+      pamukDilim.className = "dilim dilim-pamuk";
+      pamukDilim.style.width = (pSayi / toplam * 100) + "%";
+      const elastanDilim = document.createElement("span");
+      elastanDilim.className = "dilim dilim-elastan";
+      elastanDilim.style.width = (eSayi / toplam * 100) + "%";
+      cubuk.append(pamukDilim, elastanDilim);
+      cubuk.setAttribute("aria-label", "Pamuk %" + yuzde(pamuk) + ", Elastan %" + yuzde(elastan));
+      not.append(elyafSatiri("Pamuk", pamuk, "#0f766e"), elyafSatiri("Elastan", elastan, "#99f6e4"));
+    }
+
+    function kontrolSatiri(durum, yazi) {
+      const li = document.createElement("li");
+      li.className = durum;
+      li.textContent = yazi;
+      return li;
+    }
+    function durumRozeti(durum, yazi) {
+      const span = document.createElement("span");
+      span.className = "durum-rozet durum-rozet-" + durum;
+      span.textContent = yazi;
+      return span;
+    }
+    function surumAlanlari(surum) {
+      return [
+        ["Model", metin(surum.modelAdi)],
+        ["Parti", metin(surum.batchNo)],
+        ["Üretim yeri", metin(surum.uretimYeri)],
+        ["Pamuk", yuzde(surum.pamuk) + "%"],
+        ["Elastan", yuzde(surum.elastan) + "%"]
+      ];
+    }
+    function surumFarklari(yeni, eski) {
+      if (!eski) return [];
+      const sonraki = surumAlanlari(yeni);
+      const onceki = surumAlanlari(eski);
+      const fark = [];
+      sonraki.forEach((alan, index) => {
+        if (alan[1] !== onceki[index][1]) fark.push(alan[0] + ": " + onceki[index][1] + " → " + alan[1]);
+      });
+      return fark;
+    }
+    function gecmisOgesi(surum, onceki, guncel) {
+      const li = document.createElement("li");
+      const baslik = document.createElement("strong");
+      baslik.textContent = (guncel ? "Güncel sürüm v" : "Önceki sürüm v") + metin(surum.version);
+      const zaman = document.createElement("time");
+      zaman.dateTime = metin(surum.updatedAt);
+      zaman.textContent = tarihMetni(surum.updatedAt);
+      const aciklama = document.createElement("p");
+      aciklama.textContent = surumAlanlari(surum).map((alan) => alan[0] + " " + alan[1]).join(" · ");
+      li.append(baslik, zaman, aciklama);
+      const farklar = surumFarklari(surum, onceki);
+      const not = document.createElement("p");
+      if (!onceki) not.textContent = "İlk kayıt";
+      else if (farklar.length === 0) not.textContent = "Listelenen alanlarda fark yok.";
+      else not.textContent = "Değişen alanlar";
+      li.append(not);
+      farklar.forEach((satir) => {
+        const p = document.createElement("p");
+        p.textContent = satir;
+        li.append(p);
+      });
+      return li;
+    }
+
+    async function detayiCiz() {
+      const bolumBilgi = bolum();
+      const istek = ++detayIstek;
+      const ad = document.getElementById("detay-ad");
+      const gtinSatiri = document.getElementById("detay-gtin");
+      const durum = document.getElementById("detay-durum");
+      const icerik = document.getElementById("detay-icerik");
+      const rozetler = document.getElementById("detay-rozetler");
+      const pasaport = document.getElementById("detay-pasaport");
+      const parti = document.getElementById("detay-parti");
+      const yer = document.getElementById("detay-yer");
+      const kontrol = document.getElementById("detay-kontrol");
+      const surumler = document.getElementById("detay-surumler");
+      const qr = document.getElementById("detay-qr");
+      const baglar = document.getElementById("detay-baglar");
+      temizle(rozetler);
+      temizle(gtinSatiri);
+      temizle(kontrol);
+      temizle(surumler);
+      temizle(baglar);
+      parti.textContent = "—";
+      yer.textContent = "—";
+      const urun = tumKayitlar.find((kayit) => metin(kayit.gtin) === bolumBilgi.gtin);
+      if (!urun) {
+        ad.textContent = "Ürün bulunamadı";
+        pasaport.hidden = true;
+        icerik.hidden = true;
+        durum.hidden = false;
+        durum.textContent = tumKayitlar.length === 0 ? "Ürünler yükleniyor..." : "Ürün bulunamadı";
+        return;
+      }
+      durum.hidden = true;
+      icerik.hidden = false;
+      const gtin = metin(urun.gtin);
+      const kontrolSonuc = kayitKontrolleri(urun);
+      ad.textContent = metin(urun.modelAdi);
+      const gtinKod = document.createElement("span");
+      gtinKod.className = "gtin";
+      gtinKod.textContent = gtin;
+      gtinSatiri.append(document.createTextNode("GTIN: "), gtinKod);
+      rozetler.append(durumRozeti("bekle", "v" + metin(urun.version) + " · Kontrol ediliyor"));
+      parti.textContent = metin(urun.batchNo);
+      yer.textContent = metin(urun.uretimYeri);
+      detayElyaf(urun.pamuk, urun.elastan);
+      kontrol.append(
+        kontrolSatiri(kontrolSonuc.gtinTamam ? "tamam" : "eksik", "GTIN biçimi ve GS1 kontrol basamağı"),
+        kontrolSatiri(kontrolSonuc.elyafTamam ? "tamam" : "eksik", "Pamuk ve elastan toplamı %100"),
+        kontrolSatiri(kontrolSonuc.alanTamam ? "tamam" : "eksik", "Model, parti ve üretim yeri mevcut"),
+        kontrolSatiri("tamam", "Karbon değeri içe aktarmada doğrulandı"));
+      pasaport.hidden = !gecerliGtin(gtin);
+      pasaport.href = gecerliGtin(gtin) ? gtinAdresi(gtin, "") : "#/urunler";
+      if (gecerliGtin(gtin)) {
+        qr.src = gtinAdresi(gtin, ".png");
+        qr.alt = "QR kodu " + gtin;
+        baglar.append(
+          detayBag(kucukIkon("M7 3h8l4 4v14H7zM15 3v5h5"), "HTML pasaportu", gtinAdresi(gtin, "")),
+          detayBag(kucukIkon("M8 8l-3 4 3 4M16 8l3 4-3 4M13 6l-2 12"), "JSON-LD çıktısı", gtinAdresi(gtin, ".jsonld")),
+          detayBag(kucukIkon("M2 12s4-6 10-6 10 6 10 6-4 6-10 6S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"), "Yetkili görünüm", gtinAdresi(gtin, "?rol=yetkili")),
+          detayBag(kucukIkon("M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z"), "Sürümler", "/api/products/" + gtin + "/versions"));
+      } else {
+        qr.removeAttribute("src");
+        qr.alt = "";
+      }
+      const bekleyen = document.createElement("li");
+      bekleyen.textContent = "Sürüm geçmişi yükleniyor...";
+      surumler.append(bekleyen);
+      try {
+        const yanit = await fetch("/api/products/" + gtin + "/versions");
+        if (istek !== detayIstek) return;
+        temizle(rozetler);
+        const hepsiTamam = kontrolSonuc.tamam;
+        rozetler.append(durumRozeti(hepsiTamam ? "tamam" : "eksik", "v" + metin(urun.version) + (hepsiTamam ? " · Geçerli" : " · Eksik")));
+        if (!yanit.ok) throw new Error("yanit");
+        const veri = await yanit.json();
+        const sirali = [];
+        if (veri && veri.guncel) sirali.push(veri.guncel);
+        if (veri && Array.isArray(veri.eskiSurumler)) sirali.push(...veri.eskiSurumler);
+        temizle(surumler);
+        if (sirali.length === 0) {
+          const bos = document.createElement("li");
+          bos.textContent = "Sürüm kaydı yok.";
+          surumler.append(bos);
+          return;
+        }
+        sirali.sort((a, b) => Number(b.version) - Number(a.version));
+        sirali.forEach((surum, index) => surumler.append(gecmisOgesi(surum, sirali[index + 1] || null, index === 0)));
+      } catch {
+        if (istek !== detayIstek) return;
+        temizle(surumler);
+        const hata = document.createElement("li");
+        hata.textContent = "Sürüm geçmişi alınamadı.";
+        surumler.append(hata);
+      }
+    }
+
+    function sayacYaz(etiket, deger, tur) {
+      const p = document.createElement("p");
+      p.className = "sayac sayac-" + tur;
+      const ad = document.createElement("span");
+      ad.textContent = etiket;
+      const sayi = document.createElement("strong");
+      sayi.textContent = metin(deger);
+      p.append(ad, sayi);
+      sayaclar.append(p);
+    }
+    function ozetKartlari(rapor) {
+      temizle(sayaclar);
+      if (!rapor) {
+        sayacYaz("Toplam satır", "—", "notr");
+        sayacYaz("Yeni eklenen", "—", "yeni");
+        sayacYaz("Güncellenen", "—", "guncellenen");
+        sayacYaz("Değişiklik yok", "—", "ayni");
+        sayacYaz("Hatalı", "—", "hatali");
+        return;
+      }
+      const yazilan = Number(rapor.basarili || 0);
+      const guncellenen = Number(rapor.guncellenen || 0);
+      sayacYaz("Toplam satır", Number(rapor.toplamSatir), "notr");
+      sayacYaz("Yeni eklenen", yazilan - guncellenen, "yeni");
+      sayacYaz("Güncellenen", guncellenen, "guncellenen");
+      sayacYaz("Değişiklik yok", Number(rapor.degisiklikYok || 0), "ayni");
+      sayacYaz("Hatalı", Number(rapor.hatali || 0), "hatali");
+    }
+    function sonucuGoster(rapor) {
+      ozetKartlari(rapor);
+      temizle(hatalar);
+      const toplam = Number(rapor.toplamSatir);
+      const hatali = Number(rapor.hatali || 0);
+      const gecerli = toplam - hatali;
+      aktarimAyrinti.hidden = false;
+      const yazilan = Number(rapor.basarili || 0);
+      const guncellenen = Number(rapor.guncellenen || 0);
+      aktarimAyrinti.textContent = "Doğrulamayı geçen " + gecerli + " satırdan " + (yazilan - guncellenen) + " yeni, " + guncellenen + " güncellenen, " + metin(rapor.degisiklikYok) + " aynı kaldı. Aynı GTIN ürünü çoğaltmaz.";
+      const listeHata = Array.isArray(rapor.hatalar) ? rapor.hatalar : [];
+      if (listeHata.length > 0) hatalar.append(hataTablosu(listeHata));
+      hatalar.hidden = listeHata.length === 0;
+      hataBaslik.hidden = listeHata.length === 0;
+      hataYok.hidden = listeHata.length !== 0;
+      aktarimHataIndir.hidden = listeHata.length === 0;
+    }
+    function hataTablosu(listeHata) {
+      const sarmal = document.createElement("div");
+      sarmal.className = "tablo-sarmal";
+      const tablo = document.createElement("table");
+      const baslik = document.createElement("thead");
+      const satir = document.createElement("tr");
+      ["Satır", "Neden"].forEach((ad) => {
+        const hucreBaslik = document.createElement("th");
+        hucreBaslik.scope = "col";
+        hucreBaslik.textContent = ad;
+        satir.append(hucreBaslik);
+      });
+      baslik.append(satir);
+      const govde = document.createElement("tbody");
+      listeHata.forEach((hata) => {
+        const nedenler = Array.isArray(hata.nedenler) && hata.nedenler.length ? hata.nedenler : ["Hata nedeni yok."];
+        nedenler.forEach((neden) => {
+          const tr = document.createElement("tr");
+          tr.append(hucre(hata.satir), hucre(neden));
+          govde.append(tr);
+        });
+      });
+      tablo.append(baslik, govde);
+      sarmal.append(tablo);
+      return sarmal;
+    }
+    function uyar(mesaj) {
+      yuklemeHata.hidden = false;
+      yuklemeHata.textContent = mesaj;
+    }
+    function uyariTemizle() {
+      yuklemeHata.textContent = "";
+      yuklemeHata.hidden = true;
+    }
+    function dosyayiGoster(file) {
+      if (!file) {
+        dosyaAdi.textContent = "Dosya seçilmedi";
+        yuklemeDurum.textContent = "Dosya bekleniyor.";
+        return false;
+      }
+      if (!csvMi(file)) {
+        dosya.value = "";
+        dosyaAdi.textContent = "Dosya seçilmedi";
+        yuklemeDurum.textContent = "Dosya bekleniyor.";
+        uyar("Yalnızca .csv dosyası seçebilirsiniz.");
+        return false;
+      }
+      uyariTemizle();
+      dosyaAdi.textContent = file.name;
+      yuklemeDurum.textContent = "Dosya hazır.";
+      return true;
+    }
+    function hataDosyasiIndir() {
+      if (!sonRapor || !Array.isArray(sonRapor.hatalar) || sonRapor.hatalar.length === 0) return;
+      const satirlar = ["satir,neden"];
+      for (const hata of sonRapor.hatalar) {
+        const nedenler = Array.isArray(hata.nedenler) ? hata.nedenler : [];
+        satirlar.push(csvAlan(hata.satir) + "," + csvAlan(nedenler.join(" | ") || "Hata nedeni yok."));
+      }
+      const blob = new Blob(["\uFEFF" + satirlar.join("\r\n")], { type: "text/csv;charset=utf-8" });
+      const bag = document.createElement("a");
+      bag.href = URL.createObjectURL(blob);
+      bag.download = "mini-dpp-hatalar.csv";
+      bag.click();
+      URL.revokeObjectURL(bag.href);
+    }
+
+    function csvAlan(deger) {
+      const yazi = metin(deger);
+      if (/[",\n\r]/.test(yazi)) return '"' + yazi.replaceAll('"', '""') + '"';
+      return yazi;
+    }
+    function disaAktar() {
+      const baslik = ["gtin", "model_adi", "batch_no", "uretim_yeri", "elyaf_pamuk_yuzde", "elyaf_elastan_yuzde", "surum", "guncelleme"];
+      const satirlar = [baslik.join(",")];
+      for (const urun of tumKayitlar) {
+        satirlar.push([
+          csvAlan(urun.gtin), csvAlan(urun.modelAdi), csvAlan(urun.batchNo), csvAlan(urun.uretimYeri),
+          csvAlan(urun.pamuk), csvAlan(urun.elastan), csvAlan(urun.version), csvAlan(urun.updatedAt)
+        ].join(","));
+      }
+      const blob = new Blob(["\uFEFF" + satirlar.join("\r\n")], { type: "text/csv;charset=utf-8" });
+      const bag = document.createElement("a");
+      bag.href = URL.createObjectURL(blob);
+      bag.download = "mini-dpp-envanter.csv";
+      bag.click();
+      URL.revokeObjectURL(bag.href);
+    }
+
+    function bolum() {
+      const hash = location.hash;
+      const detay = /^#\/urun\/(\d{14})$/.exec(hash);
+      if (detay) return { ad: "detay", gtin: detay[1] };
+      if (hash === "#/urunler") return { ad: "urunler" };
+      if (hash === "#/ice-aktar") return { ad: "aktar" };
+      if (hash === "#/raporlar") return { ad: "rapor" };
+      if (hash === "#/ayarlar") return { ad: "ayar" };
+      if (hash === "#/yardim") return { ad: "yardim" };
+      return { ad: "panel" };
+    }
+    function bolumuGoster() {
+      const bilgi = bolum();
+      Object.entries(gorunumler).forEach(([ad, oge]) => { oge.hidden = ad !== bilgi.ad; });
+      document.querySelectorAll(".kenar a.nav").forEach((bag) => {
+        const hedef = bag.getAttribute("data-bolum");
+        const aktif = hedef === bilgi.ad || (bilgi.ad === "detay" && hedef === "urunler");
+        bag.classList.toggle("aktif", aktif);
+        if (aktif) bag.setAttribute("aria-current", "page");
+        else bag.removeAttribute("aria-current");
+      });
+      if (bilgi.ad === "detay") detayiCiz();
+    }
+
+    dosya.addEventListener("change", () => dosyayiGoster(dosya.files && dosya.files[0]));
+    ["dragenter", "dragover"].forEach((ad) => birak.addEventListener(ad, (olay) => {
+      olay.preventDefault();
+      birak.classList.add("uzerinde");
+    }));
+    ["dragleave", "drop"].forEach((ad) => birak.addEventListener(ad, (olay) => {
+      olay.preventDefault();
+      birak.classList.remove("uzerinde");
+    }));
+    birak.addEventListener("drop", (olay) => {
+      const file = olay.dataTransfer && olay.dataTransfer.files && olay.dataTransfer.files[0];
+      if (!file || !dosyayiGoster(file)) return;
+      const aktarim = new DataTransfer();
+      aktarim.items.add(file);
+      dosya.files = aktarim.files;
+    });
+    yukleme.addEventListener("submit", async (olay) => {
+      olay.preventDefault();
+      uyariTemizle();
+      ozetKartlari(null);
+      temizle(hatalar);
+      hatalar.hidden = true;
+      hataBaslik.hidden = true;
+      aktarimHataIndir.hidden = true;
+      aktarimAyrinti.hidden = true;
+      aktarimAyrinti.textContent = "";
+      hataYok.hidden = true;
+      const file = dosya.files && dosya.files[0];
+      if (!file || !dosyayiGoster(file)) return;
+      const govde = new FormData();
+      govde.append("file", file);
+      yukle.disabled = true;
+      dosya.disabled = true;
+      yukle.textContent = "Yükleniyor...";
+      yuklemeDurum.textContent = "Yükleniyor...";
+      try {
+        const yanit = await fetch("/api/import", { method: "POST", body: govde });
+        const veri = await yanit.json().catch(() => null);
+        if (!yanit.ok) {
+          yuklemeDurum.textContent = "İçe aktarma tamamlanamadı.";
+          uyar(veri && veri.mesaj ? veri.mesaj : "Yükleme başarısız.");
+          return;
+        }
+        raporuSakla(veri, file.name);
+        sonucuGoster(sonRapor);
+        yuklemeDurum.textContent = "İçe aktarma tamamlandı.";
+      } catch {
+        yuklemeDurum.textContent = "İçe aktarma tamamlanamadı.";
+        uyar("Sunucuya ulaşılamadı.");
+      } finally {
+        yukle.disabled = false;
+        dosya.disabled = false;
+        yukle.textContent = "Yükle";
+        await listeyiYukle();
+      }
+    });
+
+    arama.addEventListener("input", () => {
+      if (sistem.classList.contains("hata")) return;
+      sayfa = 1;
+      cizListe(tumKayitlar);
+      if (arama.value.trim() && location.hash !== "#/urunler") location.hash = "#/urunler";
+    });
+    document.querySelectorAll(".filtreler select").forEach((secim) => {
+      secim.addEventListener("change", () => {
+        const tur = secim.dataset.filtre;
+        if (tur) {
+          filtre[tur] = secim.value;
+          sayfa = 1;
+        }
+        if (secim.classList.contains("sira-sec")) {
+          sira.alan = secim.value;
+          sira.yon = 1;
+        }
+        cizListe(tumKayitlar);
+      });
+    });
+    document.querySelectorAll(".sira-yon").forEach((dugme) => {
+      dugme.addEventListener("click", () => {
+        sira.yon *= -1;
+        cizListe(tumKayitlar);
+      });
+    });
+    document.querySelectorAll("button.sira").forEach((dugme) => {
+      dugme.addEventListener("click", () => {
+        const alan = dugme.parentElement.dataset.sira;
+        if (sira.alan === alan) sira.yon *= -1;
+        else { sira.alan = alan; sira.yon = 1; }
+        cizListe(tumKayitlar);
+      });
+    });
+    document.querySelectorAll(".sayfa-once").forEach((dugme) => {
+      dugme.addEventListener("click", () => { sayfa -= 1; cizListe(tumKayitlar); });
+    });
+    document.querySelectorAll(".sayfa-sonra").forEach((dugme) => {
+      dugme.addEventListener("click", () => { sayfa += 1; cizListe(tumKayitlar); });
+    });
+    document.querySelectorAll(".filtre-temizle").forEach((dugme) => {
+      dugme.addEventListener("click", filtreleriTemizle);
+    });
+    document.querySelectorAll(".etiketler").forEach((kutu) => {
+      kutu.addEventListener("click", (olay) => {
+        const dugme = olay.target.closest(".filtre-etiket");
+        if (!dugme || !kutu.contains(dugme)) return;
+        const tur = dugme.dataset.tur;
+        if (tur === "arama") arama.value = "";
+        else if (tur && Object.prototype.hasOwnProperty.call(filtre, tur)) filtre[tur] = "";
+        sayfa = 1;
+        cizListe(tumKayitlar);
+      });
+    });
+    dogrulamaAra.addEventListener("input", () => dogrulamaTablosu(tumKayitlar));
+    pinler.addEventListener("click", (olay) => {
+      const dugme = olay.target.closest(".pin");
+      if (!dugme || !pinler.contains(dugme)) return;
+      sehirSuz(dugme.dataset.sehir || "");
+    });
+    document.getElementById("disa-aktar").addEventListener("click", disaAktar);
+    document.getElementById("disa-aktar").title = "Karbon değeri bu dosyada yoktur.";
+    zil.addEventListener("click", (olay) => {
+      olay.stopPropagation();
+      const acik = zilListe.hidden;
+      zilListe.hidden = !acik;
+      zil.setAttribute("aria-expanded", acik ? "true" : "false");
+    });
+    document.addEventListener("click", (olay) => {
+      menuleriKapat();
+      if (olay.target.closest("#zil") || olay.target.closest("#zil-liste")) return;
+      zilListe.hidden = true;
+      zil.setAttribute("aria-expanded", "false");
+    });
+    document.addEventListener("keydown", (olay) => {
+      if (olay.key !== "Escape") return;
+      menuleriKapat();
+      zilListe.hidden = true;
+      zil.setAttribute("aria-expanded", "false");
+    });
+    window.addEventListener("hashchange", () => {
+      zilListe.hidden = true;
+      zil.setAttribute("aria-expanded", "false");
+      bolumuGoster();
+    });
+    function ayariKaydet() {
+      ayar = {
+        tema: document.getElementById("ayar-tema").value === "koyu" ? "koyu" : "acik",
+        tablo: document.getElementById("ayar-tablo").value === "sik" ? "sik" : "ferah",
+        tarih: document.getElementById("ayar-tarih").value === "gun" ? "gun" : "gun-saat"
+      };
+      try { localStorage.setItem(AYAR_DEPO, JSON.stringify(ayar)); } catch { /* görünüm yine uygulanır */ }
+      ayarUygula();
+      cizListe(tumKayitlar);
+      ozetleriYaz(tumKayitlar);
+      if (bolum().ad === "detay") detayiCiz();
+    }
+    document.getElementById("ayar-tema").addEventListener("change", ayariKaydet);
+    document.getElementById("ayar-tablo").addEventListener("change", ayariKaydet);
+    document.getElementById("ayar-tarih").addEventListener("change", ayariKaydet);
+    aktarimHataIndir.addEventListener("click", hataDosyasiIndir);
+    document.getElementById("onizleme-once").addEventListener("click", () => onizlemeKaydir(-1));
+    document.getElementById("onizleme-sonra").addEventListener("click", () => onizlemeKaydir(1));
+    qrKapat.addEventListener("click", () => qrPencere.close());
+    document.getElementById("detay-qr-dugme").addEventListener("click", () => {
+      const qr = document.getElementById("detay-qr");
+      if (!qr.getAttribute("src")) return;
+      qrBuyuk.src = qr.src;
+      qrBuyuk.alt = qr.alt || "QR kodu";
+      if (typeof qrPencere.showModal === "function") qrPencere.showModal();
+    });
+    qrPencere.addEventListener("click", (olay) => { if (olay.target === qrPencere) qrPencere.close(); });
+
+    ozetKartlari(null);
+    bolumuGoster();
+    listeyiYukle();
+  </script>
+</body>
+</html>
